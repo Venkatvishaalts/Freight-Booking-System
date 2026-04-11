@@ -8,8 +8,9 @@
     "dev": "nodemon backend/src/server.js",
     "db:init": "node backend/src/scripts/initDatabase.js",
     "db:seed": "node backend/src/scripts/initDatabase.js --seed",
-    "db:reset": "node src/scripts/initDatabase.js --seed --reset",
-    "test:models": "node backend/src/scripts/testModels.js"
+    "db:reset": "node backend/scripts/initDatabase.js --seed --reset",
+    "test:models": "node backend/src/scripts/testModels.js",
+    "test:api":"jest --watch"
   },
   "keywords": [],
   "author": "",
