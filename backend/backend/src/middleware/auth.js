@@ -2,7 +2,6 @@ const jwt = require('jsonwebtoken');
 
 const authMiddleware = (req, res, next) => {
   try {
-    // Get token from headers
     const authHeader = req.headers.authorization;
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -12,11 +11,8 @@ const authMiddleware = (req, res, next) => {
       });
     }
 
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-
-    // Verify token
+    const token = authHeader.substring(7);
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
     req.user = decoded;
     next();
   } catch (error) {
@@ -26,7 +22,6 @@ const authMiddleware = (req, res, next) => {
         message: 'Token has expired'
       });
     }
-    
     return res.status(401).json({
       success: false,
       message: 'Invalid token'
@@ -34,9 +29,14 @@ const authMiddleware = (req, res, next) => {
   }
 };
 
-// Role-based access control
 const authorize = (...roles) => {
   return (req, res, next) => {
+    console.log('🔍 authorize() called');
+    console.log('req.user:', req.user);
+    console.log('required roles:', roles);
+    console.log('user_type value:', req.user?.user_type);
+    console.log('match?', roles.includes(req.user?.user_type));
+
     if (!req.user) {
       return res.status(401).json({
         success: false,
@@ -44,7 +44,10 @@ const authorize = (...roles) => {
       });
     }
 
-    if (!roles.includes(req.user.user_type)) {
+    const userRole = String(req.user.user_type || '').trim().toLowerCase();
+    const allowedRoles = roles.map(role => String(role).trim().toLowerCase());
+
+    if (!allowedRoles.includes(userRole)) {
       return res.status(403).json({
         success: false,
         message: `Access denied. Only ${roles.join(', ')} can access this resource`
@@ -55,7 +58,5 @@ const authorize = (...roles) => {
   };
 };
 
-module.exports = {
-  authMiddleware,
-  authorize
-};
+// ✅ THIS WAS MISSING
+module.exports = { authMiddleware, authorize };

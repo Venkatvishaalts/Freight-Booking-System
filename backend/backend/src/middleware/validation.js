@@ -38,10 +38,10 @@ const validators = {
       .matches(/^[0-9]{10,15}$/)
       .withMessage('Invalid phone number'),
     body('company_name')
-      .optional()
-      .trim()
-      .isLength({ min: 2 })
-      .withMessage('Company name must be at least 2 characters')
+  .optional({ checkFalsy: true })   // ← checkFalsy: true ignores empty strings
+  .trim()
+  .isLength({ min: 2 })
+  .withMessage('Company name must be at least 2 characters')
   ],
 
   login: [

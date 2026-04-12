@@ -11,14 +11,20 @@ const app = express();
 // MIDDLEWARE
 // ============================================================================
 
-// Security headers
-app.use(helmet());
-
-// CORS configuration
+// CORS must be FIRST — before helmet and everything else
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: ['http://localhost:3000', 'http://localhost:3001'],
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   optionsSuccessStatus: 200
+}));
+
+
+
+// Security headers (after cors)
+app.use(helmet({
+  crossOriginResourcePolicy: false,
 }));
 
 // Request logging
