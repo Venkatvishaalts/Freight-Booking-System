@@ -66,12 +66,12 @@ const shipmentController = {
       } = req.query;
 
       const where = {};
-      
+
       if (status) where.current_status = status;
       if (freight_type) where.freight_type = freight_type;
       if (shipper_id) where.shipper_id = shipper_id;
       if (carrier_id) where.carrier_id = carrier_id;
-      
+
       if (min_weight || max_weight) {
         where.weight = {};
         if (min_weight) where.weight[Op.gte] = parseFloat(min_weight);
@@ -205,24 +205,81 @@ const shipmentController = {
         });
       }
 
-      // Check authorization - only shipper or admin can update
-      if (req.user.id !== shipment.shipper_id && req.user.user_type !== 'admin') {
+      const isShipper = req.user.id === shipment.shipper_id;
+      const isCarrier = req.user.id === shipment.carrier_id;
+      const isAdmin   = req.user.user_type === 'admin';
+
+      // ── Only shipper, assigned carrier, or admin can touch this shipment
+      if (!isShipper && !isCarrier && !isAdmin) {
         return res.status(403).json({
           success: false,
           message: 'You do not have permission to update this shipment'
         });
       }
 
-      // Cannot update if already assigned or in transit
-      if (['confirmed', 'in_transit', 'delivered', 'cancelled'].includes(shipment.current_status)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Cannot update shipment in its current status'
+      // ── CARRIER: can only update current_status ───────────────────────────
+      if (isCarrier && !isShipper && !isAdmin) {
+        if (!updateData.current_status) {
+          return res.status(400).json({
+            success: false,
+            message: 'Carriers can only update shipment status'
+          });
+        }
+
+        // Carrier allowed status transitions only
+        const carrierAllowedStatuses = ['in_transit', 'out_for_delivery', 'delivered'];
+        if (!carrierAllowedStatuses.includes(updateData.current_status)) {
+          return res.status(400).json({
+            success: false,
+            message: `Carriers can only set status to: ${carrierAllowedStatuses.join(', ')}`
+          });
+        }
+
+        // Cannot mark delivered if already delivered or cancelled
+        if (['delivered', 'cancelled'].includes(shipment.current_status)) {
+          return res.status(400).json({
+            success: false,
+            message: 'Cannot update a shipment that is already delivered or cancelled'
+          });
+        }
+
+        shipment.current_status = updateData.current_status;
+
+        // Record actual delivery time when marked delivered
+        if (updateData.current_status === 'delivered') {
+          shipment.actual_delivery = new Date();
+        }
+
+        await shipment.save();
+
+        return res.json({
+          success: true,
+          message: 'Shipment status updated successfully',
+          data: shipment
         });
       }
 
-      // Update allowed fields
-      const allowedFields = ['pickup_location', 'delivery_location', 'weight', 'quantity', 'price_quote', 'description', 'special_instructions'];
+      // ── SHIPPER / ADMIN: can update shipment details ──────────────────────
+      // Cannot edit details if already in transit or delivered
+      if (['in_transit', 'delivered', 'cancelled'].includes(shipment.current_status)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot edit shipment details once it is in transit, delivered, or cancelled'
+        });
+      }
+
+      const allowedFields = [
+        'pickup_location',
+        'delivery_location',
+        'weight',
+        'quantity',
+        'price_quote',
+        'description',
+        'special_instructions',
+        'scheduled_pickup_date',
+        'scheduled_delivery_date'
+      ];
+
       allowedFields.forEach(field => {
         if (updateData[field] !== undefined) {
           shipment[field] = updateData[field];

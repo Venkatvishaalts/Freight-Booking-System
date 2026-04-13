@@ -17,10 +17,7 @@ const userController = {
         });
       }
 
-      res.json({
-        success: true,
-        data: user
-      });
+      res.json(user);
     } catch (error) {
       res.status(500).json({
         success: false,
@@ -34,10 +31,10 @@ const userController = {
   updateProfile: async (req, res) => {
     try {
       const userId = req.params.id;
-      const { username, phone, company_name, profile_image } = req.body;
+      const { username, email, phone, company_name, profile_image } = req.body;
 
       // Check authorization - user can only update their own profile
-      if (req.user.id !== userId && req.user.user_type !== 'admin') {
+      if (req.user.id !== parseInt(userId) && req.user.user_type !== 'admin') {
         return res.status(403).json({
           success: false,
           message: 'You do not have permission to update this profile'
@@ -55,17 +52,14 @@ const userController = {
 
       // Update fields
       if (username) user.username = username;
+      if (email) user.email = email;
       if (phone) user.phone = phone;
       if (company_name) user.company_name = company_name;
       if (profile_image) user.profile_image = profile_image;
 
       await user.save();
 
-      res.json({
-        success: true,
-        message: 'Profile updated successfully',
-        data: user
-      });
+      res.json(user);
     } catch (error) {
       res.status(500).json({
         success: false,
@@ -147,7 +141,7 @@ const userController = {
       const { vehicle_type, capacity_kg, license_plate, registration_number, manufactured_year } = req.body;
 
       // Check authorization
-      if (req.user.id !== userId && req.user.user_type !== 'admin') {
+      if (req.user.id !== parseInt(userId) && req.user.user_type !== 'admin') {
         return res.status(403).json({
           success: false,
           message: 'You do not have permission to add vehicles'

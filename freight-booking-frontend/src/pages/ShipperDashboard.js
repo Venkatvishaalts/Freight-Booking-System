@@ -27,16 +27,15 @@ export default function ShipperDashboard() {
     setFetching(true);
     try {
       const res = await getShipperShipments(user.id);
-      console.log('Shipments response:', res.data); // ← helpful for debugging
+      console.log('Shipments response:', res.data);
 
-      // Handle both array response and { data: [] } response safely
       const data = Array.isArray(res.data) ? res.data
                  : Array.isArray(res.data.data) ? res.data.data
                  : [];
       setShipments(data);
     } catch {
       toast.error('Failed to load shipments');
-      setShipments([]); // always fallback to empty array
+      setShipments([]);
     } finally {
       setFetching(false);
     }
@@ -90,6 +89,7 @@ export default function ShipperDashboard() {
             <p className="text-gray-500 text-sm">Welcome, {user?.username}</p>
           </div>
           <button
+            data-cy="new-shipment"
             onClick={() => setShowForm(!showForm)}
             className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded font-medium transition"
           >
@@ -105,23 +105,42 @@ export default function ShipperDashboard() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Pickup Location</label>
-                <input type="text" name="pickup_location" value={form.pickup_location}
-                  onChange={handleChange} required placeholder="Chennai, Tamil Nadu"
-                  className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+                <input
+                  data-cy="pickup"
+                  type="text"
+                  name="pickup_location"
+                  value={form.pickup_location}
+                  onChange={handleChange}
+                  required
+                  placeholder="Chennai, Tamil Nadu"
+                  className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Location</label>
-                <input type="text" name="delivery_location" value={form.delivery_location}
-                  onChange={handleChange} required placeholder="Mumbai, Maharashtra"
-                  className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+                <input
+                  data-cy="delivery"
+                  type="text"
+                  name="delivery_location"
+                  value={form.delivery_location}
+                  onChange={handleChange}
+                  required
+                  placeholder="Mumbai, Maharashtra"
+                  className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Freight Type</label>
-                <select name="freight_type" value={form.freight_type}
-                  onChange={handleChange} required
-                  className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                <select
+                  data-cy="freight-type"
+                  name="freight_type"
+                  value={form.freight_type}
+                  onChange={handleChange}
+                  required
+                  className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                >
                   <option value="">Select type</option>
                   <option value="electronics">Electronics</option>
                   <option value="food">Food & Perishables</option>
@@ -135,45 +154,82 @@ export default function ShipperDashboard() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Weight (kg)</label>
-                <input type="number" name="weight" value={form.weight}
-                  onChange={handleChange} required placeholder="500"
-                  className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+                <input
+                  data-cy="weight"
+                  type="number"
+                  name="weight"
+                  value={form.weight}
+                  onChange={handleChange}
+                  required
+                  placeholder="500"
+                  className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
-                <input type="number" name="quantity" value={form.quantity}
-                  onChange={handleChange} required placeholder="10"
-                  className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+                <input
+                  data-cy="quantity"
+                  type="number"
+                  name="quantity"
+                  value={form.quantity}
+                  onChange={handleChange}
+                  required
+                  placeholder="10"
+                  className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Price Quote (₹)</label>
-                <input type="number" name="price_quote" value={form.price_quote}
-                  onChange={handleChange} placeholder="15000"
-                  className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+                <input
+                  data-cy="price-quote"
+                  type="number"
+                  name="price_quote"
+                  value={form.price_quote}
+                  onChange={handleChange}
+                  placeholder="15000"
+                  className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Pickup Date</label>
-                <input type="date" name="scheduled_pickup_date" value={form.scheduled_pickup_date}
-                  onChange={handleChange} required
-                  className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+                <input
+                  data-cy="pickup-date"
+                  type="date"
+                  name="scheduled_pickup_date"
+                  value={form.scheduled_pickup_date}
+                  onChange={handleChange}
+                  required
+                  className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Expected Delivery Date</label>
-                <input type="date" name="scheduled_delivery_date" value={form.scheduled_delivery_date}
-                  onChange={handleChange} required
-                  className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+                <input
+                  data-cy="delivery-date"
+                  type="date"
+                  name="scheduled_delivery_date"
+                  value={form.scheduled_delivery_date}
+                  onChange={handleChange}
+                  required
+                  className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
               </div>
 
               <div className="md:col-span-2">
-                <button type="submit" disabled={loading}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded font-medium transition">
+                <button
+                  data-cy="submit-shipment"
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded font-medium transition"
+                >
                   {loading ? 'Submitting...' : 'Submit Shipment Request'}
                 </button>
               </div>
+
             </form>
           </div>
         )}

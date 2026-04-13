@@ -3,7 +3,6 @@ import { useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 import { getAllShipments } from '../services/shipmentService';
 import { createBooking, getCarrierBookings } from '../services/bookingService';
-import ShipmentCard from '../components/ShipmentCard';
 
 export default function CarrierDashboard() {
   const { user } = useSelector((state) => state.auth);
@@ -17,7 +16,6 @@ export default function CarrierDashboard() {
     try {
       const res = await getAllShipments({ status: 'pending' });
       console.log('Available shipments response:', res.data);
-
       const data = Array.isArray(res.data) ? res.data
                  : Array.isArray(res.data.data) ? res.data.data
                  : [];
@@ -35,7 +33,6 @@ export default function CarrierDashboard() {
     try {
       const res = await getCarrierBookings(user.id);
       console.log('My bookings response:', res.data);
-
       const data = Array.isArray(res.data) ? res.data
                  : Array.isArray(res.data.data) ? res.data.data
                  : [];
@@ -88,6 +85,7 @@ export default function CarrierDashboard() {
         {/* Tabs */}
         <div className="flex gap-4 mb-6 border-b">
           <button
+            data-cy="tab-available-shipments"
             onClick={() => setActiveTab('available')}
             className={`pb-2 px-1 font-medium text-sm border-b-2 transition ${
               activeTab === 'available'
@@ -98,6 +96,7 @@ export default function CarrierDashboard() {
             Available Shipments
           </button>
           <button
+            data-cy="tab-my-bookings"
             onClick={() => setActiveTab('mybookings')}
             className={`pb-2 px-1 font-medium text-sm border-b-2 transition ${
               activeTab === 'mybookings'
@@ -121,13 +120,59 @@ export default function CarrierDashboard() {
                 <p className="text-gray-400 text-sm mt-1">Check back soon for new bookings.</p>
               </div>
             ) : (
+              // ── Replaced ShipmentCard with inline card so data-cy attrs are guaranteed ──
               availableShipments.map((s) => (
-                <ShipmentCard
+                <div
                   key={s.id}
-                  shipment={s}
-                  showAccept={true}
-                  onAccept={handleAccept}
-                />
+                  data-cy="shipment-card"
+                  className="bg-white shadow rounded-lg p-4 mb-4 border border-gray-100 hover:shadow-md transition"
+                >
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h3 className="font-semibold text-gray-800 text-lg">
+                        {s.pickup_location} → {s.delivery_location}
+                      </h3>
+                      <p className="text-sm text-gray-500 mt-1">
+                        Weight: {s.weight} kg
+                      </p>
+                      {s.quantity && (
+                        <p className="text-sm text-gray-500">
+                          Quantity: {s.quantity}
+                        </p>
+                      )}
+                      {s.amount && (
+                        <p className="text-sm text-gray-500">
+                          Amount: ₹{s.amount}
+                        </p>
+                      )}
+                      {s.freight_type && (
+                        <p className="text-sm text-gray-500">
+                          Freight Type: {s.freight_type}
+                        </p>
+                      )}
+                      {s.pickup_date && (
+                        <p className="text-sm text-gray-500">
+                          Pickup: {new Date(s.pickup_date).toLocaleDateString()}
+                        </p>
+                      )}
+                      {s.delivery_date && (
+                        <p className="text-sm text-gray-500">
+                          Delivery: {new Date(s.delivery_date).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                    <span className="text-xs px-3 py-1 rounded-full font-medium bg-yellow-100 text-yellow-700">
+                      pending
+                    </span>
+                  </div>
+                  <button
+                    data-cy="accept-booking"
+                    onClick={() => handleAccept(s.id)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-medium transition"
+                  >
+                    Accept Booking
+                  </button>
+                </div>
               ))
             )}
           </>
@@ -148,7 +193,11 @@ export default function CarrierDashboard() {
               </div>
             ) : (
               myBookings.map((b) => (
-                <div key={b.id} className="bg-white shadow rounded-lg p-4 mb-4 border border-gray-100">
+                <div
+                  key={b.id}
+                  data-cy={`booking-card-${b.id}`}
+                  className="bg-white shadow rounded-lg p-4 mb-4 border border-gray-100"
+                >
                   <div className="flex justify-between items-center">
                     <div>
                       <p className="font-semibold text-gray-800">Booking #{b.id}</p>
@@ -179,6 +228,7 @@ export default function CarrierDashboard() {
             )}
           </>
         )}
+
       </div>
     </div>
   );
