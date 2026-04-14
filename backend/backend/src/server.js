@@ -11,16 +11,29 @@ const app = express();
 // MIDDLEWARE
 // ============================================================================
 
+// CHANGE: Dynamic CORS origins — reads from .env so frontend deployments work
+// Add ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001 to your .env
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',')
+  : ['http://localhost:3000', 'http://localhost:3001']; // fallback for local dev
+
 // CORS must be FIRST — before helmet and everything else
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:3001'],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (Postman, mobile apps, curl)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS blocked: ${origin} is not allowed`));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   optionsSuccessStatus: 200
 }));
-
-
 
 // Security headers (after cors)
 app.use(helmet({
