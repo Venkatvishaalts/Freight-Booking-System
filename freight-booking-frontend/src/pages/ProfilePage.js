@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { useSelector } from "react-redux";
 import api from "../services/api"; // your Axios instance with token interceptor
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -103,9 +102,6 @@ function EditField({ label, value, type = "text", onChange, disabled }) {
 
 // ─── Main Page ───────────────────────────────────────────────────────────────
 export default function ProfilePage() {
-  // ── Pull logged-in user from Redux (used only as fallback reference) ──
-  const { user: authUser } = useSelector((state) => state.auth);
-
   const [user, setUser]                       = useState(null);
   const [recentShipments, setRecentShipments] = useState([]);
   const [loading, setLoading]                 = useState(true);

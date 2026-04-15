@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 import { createShipment, getShipperShipments, deleteShipment } from '../services/shipmentService';
@@ -23,7 +23,7 @@ export default function ShipperDashboard() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
 
-  const fetchMyShipments = async () => {
+  const fetchMyShipments = useCallback(async () => {
     setFetching(true);
     try {
       const res = await getShipperShipments(user.id);
@@ -39,13 +39,13 @@ export default function ShipperDashboard() {
     } finally {
       setFetching(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     if (user && user.id) {
       fetchMyShipments();
     }
-  }, []);
+  }, [fetchMyShipments, user]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
