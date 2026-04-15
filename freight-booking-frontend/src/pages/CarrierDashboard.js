@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 import { getAllShipments } from '../services/shipmentService';
@@ -11,7 +11,7 @@ export default function CarrierDashboard() {
   const [activeTab, setActiveTab] = useState('available');
   const [fetching, setFetching] = useState(true);
 
-  const fetchAvailable = useCallback(async () => {
+  const fetchAvailable = async () => {
     setFetching(true);
     try {
       const res = await getAllShipments({ status: 'pending' });
@@ -26,9 +26,9 @@ export default function CarrierDashboard() {
     } finally {
       setFetching(false);
     }
-  }, []);
+  };
 
-  const fetchMyBookings = useCallback(async () => {
+  const fetchMyBookings = async () => {
     setFetching(true);
     try {
       const res = await getCarrierBookings(user.id);
@@ -43,15 +43,14 @@ export default function CarrierDashboard() {
     } finally {
       setFetching(false);
     }
-  }, [user]);
+  };
 
-  // ✅ Fix: all four deps included — activeTab, fetchAvailable, fetchMyBookings, user
   useEffect(() => {
     if (user && user.id) {
       if (activeTab === 'available') fetchAvailable();
       else fetchMyBookings();
     }
-  }, [activeTab, fetchAvailable, fetchMyBookings, user]);
+  }, [activeTab]);
 
   const handleAccept = async (shipmentId) => {
     try {
@@ -121,6 +120,7 @@ export default function CarrierDashboard() {
                 <p className="text-gray-400 text-sm mt-1">Check back soon for new bookings.</p>
               </div>
             ) : (
+              // ── Replaced ShipmentCard with inline card so data-cy attrs are guaranteed ──
               availableShipments.map((s) => (
                 <div
                   key={s.id}

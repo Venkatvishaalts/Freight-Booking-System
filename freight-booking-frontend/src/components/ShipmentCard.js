@@ -9,16 +9,9 @@ const statusColors = {
 };
 
 export default function ShipmentCard({ shipment, onAccept, showAccept, showDelete, onDelete }) {
-  // Resolve the shipment ID — fallback to shipment_id if id is undefined
-  const shipmentId = shipment.id ?? shipment.shipment_id;
-
-  if (!shipmentId) {
-    console.warn('[ShipmentCard] Missing shipment ID. Neither `id` nor `shipment_id` is present:', shipment);
-  }
-
   return (
     <div className="bg-white shadow rounded-lg p-4 mb-4 border border-gray-100 hover:shadow-md transition">
-
+      
       {/* Header */}
       <div className="flex justify-between items-start mb-3">
         <div>
@@ -51,28 +44,22 @@ export default function ShipmentCard({ shipment, onAccept, showAccept, showDelet
 
       {/* Action Buttons */}
       <div className="flex gap-3 items-center flex-wrap">
-        {shipmentId ? (
-          <>
-            <Link
-              to={`/shipments/${shipmentId}`}
-              className="text-sm text-blue-600 hover:underline"
-            >
-              View Details →
-            </Link>
-            <Link
-              to={`/track/${shipmentId}`}
-              className="text-sm text-green-600 hover:underline"
-            >
-              Track Shipment
-            </Link>
-          </>
-        ) : (
-          <span className="text-sm text-gray-400 italic">Links unavailable (missing ID)</span>
-        )}
+        <Link
+          to={`/shipments/${shipment.id}`}
+          className="text-sm text-blue-600 hover:underline"
+        >
+          View Details →
+        </Link>
+        <Link
+          to={`/track/${shipment.id}`}
+          className="text-sm text-green-600 hover:underline"
+        >
+          Track Shipment
+        </Link>
 
         {showAccept && (
           <button
-            onClick={() => onAccept(shipmentId)}
+            onClick={() => onAccept(shipment.id)}
             className="ml-auto bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-1.5 rounded transition"
           >
             Accept Booking
@@ -81,7 +68,7 @@ export default function ShipmentCard({ shipment, onAccept, showAccept, showDelet
 
         {showDelete && (
           <button
-            onClick={() => onDelete(shipmentId)}
+            onClick={() => onDelete(shipment.id)}
             className="ml-auto bg-red-500 hover:bg-red-600 text-white text-sm px-4 py-1.5 rounded transition"
           >
             Cancel

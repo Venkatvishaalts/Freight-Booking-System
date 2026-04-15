@@ -11,25 +11,9 @@ const app = express();
 // MIDDLEWARE
 // ============================================================================
 
-const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
-  : ['http://localhost:3000', 'http://localhost:3001'];
-
 // CORS must be FIRST — before helmet and everything else
 app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (Postman, mobile apps, curl)
-    if (!origin) return callback(null, true);
-
-    // Allow any Vercel preview deployment for your project
-    const isVercelPreview = /^https:\/\/freight-booking-system.*\.vercel\.app$/.test(origin);
-
-    if (allowedOrigins.includes(origin) || isVercelPreview) {
-      callback(null, true);
-    } else {
-      callback(new Error(`CORS blocked: ${origin} is not allowed`));
-    }
-  },
+  origin: ['http://localhost:3000', 'http://localhost:3001'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
