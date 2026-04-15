@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -49,7 +49,7 @@ export default function TrackingPage() {
   const intervalRef                     = useRef(null);
 
   // ── Data fetcher ─────────────────────────────────────────────────────────
-  const fetchTracking = useCallback(async (isPolling = false) => {
+  const fetchTracking = async (isPolling = false) => {
     try {
       const res = await getTrackingByShipment(shipmentId);
       console.log('Tracking response:', res.data);
@@ -80,7 +80,7 @@ export default function TrackingPage() {
     } finally {
       setLoading(false);
     }
-  }, [shipmentId]);
+  };
 
   // ── Initial fetch + poll every 15 seconds ────────────────────────────────
   useEffect(() => {
@@ -91,7 +91,7 @@ export default function TrackingPage() {
     }, 15000);
 
     return () => clearInterval(intervalRef.current); // cleanup on unmount
-  }, [fetchTracking]);
+  }, [shipmentId]);
 
   // ── Loading state ─────────────────────────────────────────────────────────
   if (loading) {
