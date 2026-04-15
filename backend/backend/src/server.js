@@ -36,8 +36,7 @@ app.use(cors({
   optionsSuccessStatus: 200
 }));
 
-// Handle preflight for all routes
-app.options('*', cors());
+
 
 // Security headers (after cors)
 app.use(helmet({
