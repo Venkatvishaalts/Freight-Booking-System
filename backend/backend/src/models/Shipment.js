@@ -6,9 +6,6 @@ const Shipment = sequelize.define('Shipment', {
     type: DataTypes.UUID,
     defaultValue: DataTypes.UUIDV4,
     primaryKey: true,
-    // Maps the JS attribute `id` to the `shipment_id` column in the database.
-    // Remove this line if your table uses `id` as the column name.
-    field: 'shipment_id'
   },
   shipper_id: {
     type: DataTypes.UUID,
