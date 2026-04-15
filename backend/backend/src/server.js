@@ -11,11 +11,9 @@ const app = express();
 // MIDDLEWARE
 // ============================================================================
 
-// CHANGE: Dynamic CORS origins — reads from .env so frontend deployments work
-// Add ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001 to your .env
 const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',')
-  : ['http://localhost:3000', 'http://localhost:3001']; // fallback for local dev
+  ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+  : ['http://localhost:3000', 'http://localhost:3001'];
 
 // CORS must be FIRST — before helmet and everything else
 app.use(cors({
@@ -23,7 +21,10 @@ app.use(cors({
     // Allow requests with no origin (Postman, mobile apps, curl)
     if (!origin) return callback(null, true);
 
-    if (allowedOrigins.includes(origin)) {
+    // Allow any Vercel preview deployment for your project
+    const isVercelPreview = /^https:\/\/freight-booking-system.*\.vercel\.app$/.test(origin);
+
+    if (allowedOrigins.includes(origin) || isVercelPreview) {
       callback(null, true);
     } else {
       callback(new Error(`CORS blocked: ${origin} is not allowed`));
@@ -34,6 +35,9 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
   optionsSuccessStatus: 200
 }));
+
+// Handle preflight for all routes
+app.options('*', cors());
 
 // Security headers (after cors)
 app.use(helmet({
