@@ -13,12 +13,27 @@ const app = express();
 
 /// CORS must be FIRST — before helmet and everything else
 app.use(cors({
-  origin: [
-    'http://localhost:3000', 
-    'http://localhost:3001',
-    'http://localhost:5173',
-    process.env.FRONTEND_URL  // Add this
-  ],
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://localhost:5173',
+      process.env.FRONTEND_URL
+    ];
+
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+
+    // Allow any Vercel preview deployment for your project
+    if (
+      allowedOrigins.includes(origin) ||
+      /^https:\/\/freight-booking-system.*\.vercel\.app$/.test(origin)
+    ) {
+      return callback(null, true);
+    }
+
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
