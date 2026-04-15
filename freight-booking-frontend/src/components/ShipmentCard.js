@@ -1,20 +1,20 @@
 import { Link } from 'react-router-dom';
 
 const statusColors = {
-  pending:    'bg-yellow-100 text-yellow-700',
-  confirmed:  'bg-blue-100 text-blue-700',
+  pending: 'bg-yellow-100 text-yellow-700',
+  confirmed: 'bg-blue-100 text-blue-700',
   in_transit: 'bg-purple-100 text-purple-700',
-  delivered:  'bg-green-100 text-green-700',
-  cancelled:  'bg-red-100 text-red-700',
+  delivered: 'bg-green-100 text-green-700',
+  cancelled: 'bg-red-100 text-red-700',
 };
 
 export default function ShipmentCard({ shipment, onAccept, showAccept, showDelete, onDelete }) {
-  
-  // ✅ Normalize ID — handles whatever field name the backend returns
-  const shipmentId = shipment.id ?? shipment._id ?? shipment.shipment_id;
+  // Resolve the shipment ID — fallback to shipment_id if id is undefined
+  const shipmentId = shipment.id ?? shipment.shipment_id;
 
-  console.log('Shipment object:', shipment);
-  console.log('Resolved shipmentId:', shipmentId); // 🔍 Remove after confirming
+  if (!shipmentId) {
+    console.warn('[ShipmentCard] Missing shipment ID. Neither `id` nor `shipment_id` is present:', shipment);
+  }
 
   return (
     <div className="bg-white shadow rounded-lg p-4 mb-4 border border-gray-100 hover:shadow-md transition">
@@ -51,18 +51,24 @@ export default function ShipmentCard({ shipment, onAccept, showAccept, showDelet
 
       {/* Action Buttons */}
       <div className="flex gap-3 items-center flex-wrap">
-        <Link
-          to={`/shipments/${shipmentId}`}
-          className="text-sm text-blue-600 hover:underline"
-        >
-          View Details →
-        </Link>
-        <Link
-          to={`/track/${shipmentId}`}
-          className="text-sm text-green-600 hover:underline"
-        >
-          Track Shipment
-        </Link>
+        {shipmentId ? (
+          <>
+            <Link
+              to={`/shipments/${shipmentId}`}
+              className="text-sm text-blue-600 hover:underline"
+            >
+              View Details →
+            </Link>
+            <Link
+              to={`/track/${shipmentId}`}
+              className="text-sm text-green-600 hover:underline"
+            >
+              Track Shipment
+            </Link>
+          </>
+        ) : (
+          <span className="text-sm text-gray-400 italic">Links unavailable (missing ID)</span>
+        )}
 
         {showAccept && (
           <button

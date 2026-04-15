@@ -4,7 +4,7 @@ const api = axios.create({
   baseURL: process.env.REACT_APP_API_BASE_URL,
 });
 
-// Attach JWT before every request
+// Before every request → attach the JWT token from localStorage
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -16,7 +16,7 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// 401 → force logout. 403 → let the caller handle it (don't redirect).
+// After every response → if 401 (unauthorized), force logout
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -25,7 +25,6 @@ api.interceptors.response.use(
       localStorage.removeItem('user');
       window.location.href = '/login';
     }
-    // 403 is a permissions error, NOT an auth error — don't logout
     return Promise.reject(error);
   }
 );

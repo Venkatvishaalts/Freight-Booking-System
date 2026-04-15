@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 import { createShipment, getShipperShipments, deleteShipment } from '../services/shipmentService';
@@ -23,47 +23,29 @@ export default function ShipperDashboard() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
 
-  const fetchMyShipments = useCallback(async () => {
+  const fetchMyShipments = async () => {
     setFetching(true);
     try {
       const res = await getShipperShipments(user.id);
       console.log('Shipments response:', res.data);
 
-      const raw = Array.isArray(res.data)
-        ? res.data
-        : Array.isArray(res.data.data)
-        ? res.data.data
-        : [];
-
-      // ✅ Normalize the ID field for every shipment
-      const normalized = raw.map((s) => ({
-        ...s,
-        id: s.id ?? s._id ?? s.shipment_id,
-      }));
-
-      // 🔍 DEBUG — remove after confirming correct field name
-      if (normalized.length > 0) {
-        console.log('ID fields available:', {
-          id:          raw[0].id,
-          _id:         raw[0]._id,
-          shipment_id: raw[0].shipment_id,
-        });
-      }
-
-      setShipments(normalized);
+      const data = Array.isArray(res.data) ? res.data
+                 : Array.isArray(res.data.data) ? res.data.data
+                 : [];
+      setShipments(data);
     } catch {
       toast.error('Failed to load shipments');
       setShipments([]);
     } finally {
       setFetching(false);
     }
-  }, [user]);
+  };
 
   useEffect(() => {
     if (user && user.id) {
       fetchMyShipments();
     }
-  }, [fetchMyShipments, user]);
+  }, []);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -73,14 +55,7 @@ export default function ShipperDashboard() {
     e.preventDefault();
     setLoading(true);
     try {
-      const payload = {
-        ...form,
-        shipper_id: user.id,
-        weight: Number(form.weight),
-        quantity: Number(form.quantity),
-        price_quote: form.price_quote ? Number(form.price_quote) : null,
-      };
-      await createShipment(payload);
+      await createShipment({ ...form, shipper_id: user.id });
       toast.success('Shipment posted successfully!');
       setForm(emptyForm);
       setShowForm(false);
@@ -270,17 +245,15 @@ export default function ShipperDashboard() {
             <p className="text-gray-400 text-sm mt-1">Click "+ Post Shipment" to get started.</p>
           </div>
         ) : (
-          // ✅ ID is already normalized above — safe to use shipment.id everywhere
-          shipments.map((shipment) => (
+          shipments.map((s) => (
             <ShipmentCard
-              key={shipment.id}
-              shipment={shipment}
-              showDelete={shipment.current_status === 'pending'}
+              key={s.id}
+              shipment={s}
+              showDelete={s.current_status === 'pending'}
               onDelete={handleDelete}
             />
           ))
         )}
-
       </div>
     </div>
   );
