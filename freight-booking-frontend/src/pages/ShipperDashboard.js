@@ -41,6 +41,7 @@ export default function ShipperDashboard() {
     }
   }, [user]);
 
+  // ✅ Fix: fetchMyShipments and user both included as deps
   useEffect(() => {
     if (user && user.id) {
       fetchMyShipments();

@@ -112,13 +112,12 @@ export default function ProfilePage() {
   const [saveError, setSaveError]             = useState(null);
   const [activeTab, setActiveTab]             = useState("overview");
 
-  // ── Fetch real profile using token (no id needed) ─────────────────────────
+  // ✅ Fix: no authUser variable — reads profile from JWT token on the backend
   useEffect(() => {
     const fetchProfile = async () => {
       setLoading(true);
       setError(null);
       try {
-        // GET /users/me — backend reads user id from JWT token
         const res = await api.get("/users/me");
         setUser(res.data);
       } catch (err) {
@@ -131,18 +130,16 @@ export default function ProfilePage() {
 
     const fetchShipments = async () => {
       try {
-        // GET /shipments/shipper/me — backend reads shipper id from JWT token
         const res = await api.get("/shipments/shipper/me?limit=10");
         setRecentShipments(res.data.shipments || res.data);
       } catch (err) {
         console.error("Failed to load shipments:", err.response?.status, err.response?.data);
-        // non-fatal — page still works without shipments
       }
     };
 
     fetchProfile();
     fetchShipments();
-  }, []); // ✅ runs once on mount — no id dependency needed
+  }, []);
 
   // ── Edit handlers ─────────────────────────────────────────────────────────
   const startEdit = () => {
@@ -160,7 +157,6 @@ export default function ProfilePage() {
   const handleSave = async () => {
     setSaveError(null);
     try {
-      // PUT /users/:id — backend returns updated user object
       const res = await api.put(`/users/${user.id}`, form);
       setUser(res.data);
       setEditMode(false);
@@ -174,7 +170,6 @@ export default function ProfilePage() {
 
   const TABS = ["overview", "shipments", "security"];
 
-  // ── Loading state ─────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc" }}>
@@ -187,7 +182,6 @@ export default function ProfilePage() {
     );
   }
 
-  // ── Error state ───────────────────────────────────────────────────────────
   if (error) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc" }}>
@@ -202,7 +196,6 @@ export default function ProfilePage() {
 
   if (!user) return null;
 
-  // ── Safely read stats (backend may or may not return them) ────────────────
   const totalShipments = user.total_shipments ?? recentShipments.length;
   const completed      = user.completed  ?? 0;
   const pending        = user.pending    ?? 0;
@@ -223,7 +216,6 @@ export default function ProfilePage() {
 
       <div style={{ maxWidth: 860, margin: "0 auto" }}>
 
-        {/* ── Page header ── */}
         <div style={{ marginBottom: 28 }}>
           <h1 style={{ fontSize: 26, fontWeight: 800, color: "#0f172a", margin: 0, letterSpacing: -0.5 }}>
             My Profile
@@ -233,7 +225,6 @@ export default function ProfilePage() {
           </p>
         </div>
 
-        {/* ── Profile card ── */}
         <div style={{
           background: "#fff", border: "1.5px solid #e5e7eb",
           borderRadius: 16, padding: "28px 32px",
@@ -280,7 +271,6 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* ── Stats row ── */}
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
           <StatCard label="Total Shipments" value={totalShipments} accent="#2563eb" />
           <StatCard label="Completed"       value={completed}      accent="#16a34a" />
@@ -288,7 +278,6 @@ export default function ProfilePage() {
           <StatCard label="Cancelled"       value={cancelled}      accent="#dc2626" />
         </div>
 
-        {/* ── Tabs ── */}
         <div style={{ display: "flex", gap: 4, marginBottom: 20, background: "#f1f5f9", borderRadius: 10, padding: 4, width: "fit-content" }}>
           {TABS.map((tab) => (
             <button key={tab} onClick={() => setActiveTab(tab)} style={{
@@ -302,7 +291,6 @@ export default function ProfilePage() {
           ))}
         </div>
 
-        {/* ── Tab: Overview ── */}
         {activeTab === "overview" && (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             <div style={cardStyle}>
@@ -348,7 +336,6 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* ── Tab: Shipments ── */}
         {activeTab === "shipments" && (
           <div style={cardStyle}>
             <SectionTitle>Recent shipments</SectionTitle>
@@ -395,7 +382,6 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* ── Tab: Security ── */}
         {activeTab === "security" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <ChangePasswordCard userId={user.id} />
@@ -418,7 +404,7 @@ export default function ProfilePage() {
   );
 }
 
-// ─── Change Password (self-contained with real API call) ─────────────────────
+// ─── Change Password ──────────────────────────────────────────────────────────
 function ChangePasswordCard({ userId }) {
   const [fields, setFields] = useState({ current: "", newPass: "", confirm: "" });
   const [status, setStatus] = useState(null);

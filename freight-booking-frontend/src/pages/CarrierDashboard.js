@@ -45,6 +45,7 @@ export default function CarrierDashboard() {
     }
   }, [user]);
 
+  // ✅ Fix: all four deps included — activeTab, fetchAvailable, fetchMyBookings, user
   useEffect(() => {
     if (user && user.id) {
       if (activeTab === 'available') fetchAvailable();
