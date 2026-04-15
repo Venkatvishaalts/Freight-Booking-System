@@ -1,3 +1,4 @@
+
 import { Link } from 'react-router-dom';
 
 const statusColors = {
@@ -8,7 +9,10 @@ const statusColors = {
   cancelled: 'bg-red-100 text-red-700',
 };
 
-export default function ShipmentCard({ shipment, onAccept, showAccept, showDelete, onDelete }) {
+export default function ShipmentCard({ shipment, onAccept, showAccept, showDelete, onDelete }) 
+
+{
+  console.log('Shipment object:', shipment);
   return (
     <div className="bg-white shadow rounded-lg p-4 mb-4 border border-gray-100 hover:shadow-md transition">
       
