@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 import { createShipment, getShipperShipments, deleteShipment } from '../services/shipmentService';
@@ -23,7 +23,11 @@ export default function ShipperDashboard() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
 
-  const fetchMyShipments = async () => {
+  // Wrapped in useCallback so the function reference is stable.
+  // useEffect can now safely list it as a dependency without causing
+  // infinite re-renders. user.id is the real trigger for re-fetching.
+  const fetchMyShipments = useCallback(async () => {
+    if (!user?.id) return;
     setFetching(true);
     try {
       const res = await getShipperShipments(user.id);
@@ -39,13 +43,11 @@ export default function ShipperDashboard() {
     } finally {
       setFetching(false);
     }
-  };
+  }, [user]);  // re-creates only when `user` changes
 
   useEffect(() => {
-    if (user && user.id) {
-      fetchMyShipments();
-    }
-  }, []);
+    fetchMyShipments();
+  }, [fetchMyShipments]);  // ESLint satisfied — no missing deps
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -247,7 +249,7 @@ export default function ShipperDashboard() {
         ) : (
           shipments.map((s) => (
             <ShipmentCard
-              key={s.id}
+              key={s.id ?? s.shipment_id}
               shipment={s}
               showDelete={s.current_status === 'pending'}
               onDelete={handleDelete}
