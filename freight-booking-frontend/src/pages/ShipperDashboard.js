@@ -29,10 +29,28 @@ export default function ShipperDashboard() {
       const res = await getShipperShipments(user.id);
       console.log('Shipments response:', res.data);
 
-      const data = Array.isArray(res.data) ? res.data
-                 : Array.isArray(res.data.data) ? res.data.data
-                 : [];
-      setShipments(data);
+      const raw = Array.isArray(res.data)
+        ? res.data
+        : Array.isArray(res.data.data)
+        ? res.data.data
+        : [];
+
+      // ✅ Normalize the ID field for every shipment
+      const normalized = raw.map((s) => ({
+        ...s,
+        id: s.id ?? s._id ?? s.shipment_id,
+      }));
+
+      // 🔍 DEBUG — remove after confirming correct field name
+      if (normalized.length > 0) {
+        console.log('ID fields available:', {
+          id:          raw[0].id,
+          _id:         raw[0]._id,
+          shipment_id: raw[0].shipment_id,
+        });
+      }
+
+      setShipments(normalized);
     } catch {
       toast.error('Failed to load shipments');
       setShipments([]);
@@ -41,7 +59,6 @@ export default function ShipperDashboard() {
     }
   }, [user]);
 
-  // ✅ Fix: fetchMyShipments and user both included as deps
   useEffect(() => {
     if (user && user.id) {
       fetchMyShipments();
@@ -56,7 +73,14 @@ export default function ShipperDashboard() {
     e.preventDefault();
     setLoading(true);
     try {
-      await createShipment({ ...form, shipper_id: user.id });
+      const payload = {
+        ...form,
+        shipper_id: user.id,
+        weight: Number(form.weight),
+        quantity: Number(form.quantity),
+        price_quote: form.price_quote ? Number(form.price_quote) : null,
+      };
+      await createShipment(payload);
       toast.success('Shipment posted successfully!');
       setForm(emptyForm);
       setShowForm(false);
@@ -246,15 +270,17 @@ export default function ShipperDashboard() {
             <p className="text-gray-400 text-sm mt-1">Click "+ Post Shipment" to get started.</p>
           </div>
         ) : (
-          shipments.map((s) => (
+          // ✅ ID is already normalized above — safe to use shipment.id everywhere
+          shipments.map((shipment) => (
             <ShipmentCard
-              key={s.id}
-              shipment={s}
-              showDelete={s.current_status === 'pending'}
+              key={shipment.id}
+              shipment={shipment}
+              showDelete={shipment.current_status === 'pending'}
               onDelete={handleDelete}
             />
           ))
         )}
+
       </div>
     </div>
   );

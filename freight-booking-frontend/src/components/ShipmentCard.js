@@ -1,21 +1,24 @@
-
 import { Link } from 'react-router-dom';
 
 const statusColors = {
-  pending: 'bg-yellow-100 text-yellow-700',
-  confirmed: 'bg-blue-100 text-blue-700',
+  pending:    'bg-yellow-100 text-yellow-700',
+  confirmed:  'bg-blue-100 text-blue-700',
   in_transit: 'bg-purple-100 text-purple-700',
-  delivered: 'bg-green-100 text-green-700',
-  cancelled: 'bg-red-100 text-red-700',
+  delivered:  'bg-green-100 text-green-700',
+  cancelled:  'bg-red-100 text-red-700',
 };
 
-export default function ShipmentCard({ shipment, onAccept, showAccept, showDelete, onDelete }) 
+export default function ShipmentCard({ shipment, onAccept, showAccept, showDelete, onDelete }) {
+  
+  // ✅ Normalize ID — handles whatever field name the backend returns
+  const shipmentId = shipment.id ?? shipment._id ?? shipment.shipment_id;
 
-{
   console.log('Shipment object:', shipment);
+  console.log('Resolved shipmentId:', shipmentId); // 🔍 Remove after confirming
+
   return (
     <div className="bg-white shadow rounded-lg p-4 mb-4 border border-gray-100 hover:shadow-md transition">
-      
+
       {/* Header */}
       <div className="flex justify-between items-start mb-3">
         <div>
@@ -49,13 +52,13 @@ export default function ShipmentCard({ shipment, onAccept, showAccept, showDelet
       {/* Action Buttons */}
       <div className="flex gap-3 items-center flex-wrap">
         <Link
-          to={`/shipments/${shipment.id}`}
+          to={`/shipments/${shipmentId}`}
           className="text-sm text-blue-600 hover:underline"
         >
           View Details →
         </Link>
         <Link
-          to={`/track/${shipment.id}`}
+          to={`/track/${shipmentId}`}
           className="text-sm text-green-600 hover:underline"
         >
           Track Shipment
@@ -63,7 +66,7 @@ export default function ShipmentCard({ shipment, onAccept, showAccept, showDelet
 
         {showAccept && (
           <button
-            onClick={() => onAccept(shipment.id)}
+            onClick={() => onAccept(shipmentId)}
             className="ml-auto bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-1.5 rounded transition"
           >
             Accept Booking
@@ -72,7 +75,7 @@ export default function ShipmentCard({ shipment, onAccept, showAccept, showDelet
 
         {showDelete && (
           <button
-            onClick={() => onDelete(shipment.id)}
+            onClick={() => onDelete(shipmentId)}
             className="ml-auto bg-red-500 hover:bg-red-600 text-white text-sm px-4 py-1.5 rounded transition"
           >
             Cancel
