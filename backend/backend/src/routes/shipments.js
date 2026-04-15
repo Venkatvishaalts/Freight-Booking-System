@@ -18,16 +18,17 @@ router.get('/',
   shipmentController.getAllShipments
 );
 
-// GET /api/shipments/:id - Get single shipment
-router.get('/:id',
-  authMiddleware,
-  shipmentController.getShipment
-);
-
+// ✅ MOVED UP — must be before /:id
 // GET /api/shipments/shipper/:shipperId - Get shipper's shipments
 router.get('/shipper/:shipperId',
   authMiddleware,
   shipmentController.getShipperShipments
+);
+
+// GET /api/shipments/:id - Get single shipment
+router.get('/:id',
+  authMiddleware,
+  shipmentController.getShipment
 );
 
 // PUT /api/shipments/:id - Update shipment
