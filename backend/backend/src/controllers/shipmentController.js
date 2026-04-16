@@ -1,4 +1,4 @@
-const { Shipment, User, Booking } = require('../models');
+const { Shipment, User, Booking, Tracking } = require('../models');
 const { Op } = require('sequelize');
 
 const shipmentController = {
@@ -151,7 +151,6 @@ const shipmentController = {
       const { shipperId } = req.params;
       const { page = 1, limit = 10 } = req.query;
 
-      // Check authorization
       if (req.user.id !== shipperId && req.user.user_type !== 'admin') {
         return res.status(403).json({
           success: false,
@@ -190,7 +189,7 @@ const shipmentController = {
     }
   },
 
-  // Update shipment
+  // ✅ Update shipment (MODIFIED)
   updateShipment: async (req, res) => {
     try {
       const { id } = req.params;
@@ -209,7 +208,6 @@ const shipmentController = {
       const isCarrier = req.user.id === shipment.carrier_id;
       const isAdmin   = req.user.user_type === 'admin';
 
-      // ── Only shipper, assigned carrier, or admin can touch this shipment
       if (!isShipper && !isCarrier && !isAdmin) {
         return res.status(403).json({
           success: false,
@@ -217,25 +215,25 @@ const shipmentController = {
         });
       }
 
-      // ── CARRIER: can only update current_status ───────────────────────────
+      // ── ✅ REPLACED CARRIER BLOCK ───────────────────────────
       if (isCarrier && !isShipper && !isAdmin) {
-        if (!updateData.current_status) {
+        const { current_status, latitude, longitude, location, notes } = updateData;
+
+        if (!current_status) {
           return res.status(400).json({
             success: false,
             message: 'Carriers can only update shipment status'
           });
         }
 
-        // Carrier allowed status transitions only
         const carrierAllowedStatuses = ['in_transit', 'out_for_delivery', 'delivered'];
-        if (!carrierAllowedStatuses.includes(updateData.current_status)) {
+        if (!carrierAllowedStatuses.includes(current_status)) {
           return res.status(400).json({
             success: false,
             message: `Carriers can only set status to: ${carrierAllowedStatuses.join(', ')}`
           });
         }
 
-        // Cannot mark delivered if already delivered or cancelled
         if (['delivered', 'cancelled'].includes(shipment.current_status)) {
           return res.status(400).json({
             success: false,
@@ -243,14 +241,24 @@ const shipmentController = {
           });
         }
 
-        shipment.current_status = updateData.current_status;
+        shipment.current_status = current_status;
 
-        // Record actual delivery time when marked delivered
-        if (updateData.current_status === 'delivered') {
+        if (current_status === 'delivered') {
           shipment.actual_delivery = new Date();
         }
 
         await shipment.save();
+
+        // ✅ Tracking event
+        await Tracking.create({
+          shipment_id: shipment.id,
+          status: current_status,
+          location: location || shipment.delivery_location,
+          latitude: latitude || 0,
+          longitude: longitude || 0,
+          notes: notes || null,
+          timestamp: new Date(),
+        });
 
         return res.json({
           success: true,
@@ -259,8 +267,7 @@ const shipmentController = {
         });
       }
 
-      // ── SHIPPER / ADMIN: can update shipment details ──────────────────────
-      // Cannot edit details if already in transit or delivered
+      // ── SHIPPER / ADMIN ───────────────────────────
       if (['in_transit', 'delivered', 'cancelled'].includes(shipment.current_status)) {
         return res.status(400).json({
           success: false,
@@ -316,7 +323,6 @@ const shipmentController = {
         });
       }
 
-      // Check authorization
       if (req.user.id !== shipment.shipper_id && req.user.user_type !== 'admin') {
         return res.status(403).json({
           success: false,
@@ -324,7 +330,6 @@ const shipmentController = {
         });
       }
 
-      // Cannot cancel if already delivered
       if (shipment.current_status === 'delivered') {
         return res.status(400).json({
           success: false,

@@ -1,4 +1,4 @@
-const { Booking, Shipment, User } = require('../models');
+const { Booking, Shipment, User, Tracking } = require('../models');
 
 const bookingController = {
   // Create booking (Carrier accepts shipment)
@@ -6,7 +6,6 @@ const bookingController = {
     try {
       const { shipment_id, estimated_delivery } = req.body;
 
-      // Check if shipment exists
       const shipment = await Shipment.findByPk(shipment_id);
 
       if (!shipment) {
@@ -16,7 +15,6 @@ const bookingController = {
         });
       }
 
-      // Check if shipment is still available
       if (shipment.current_status !== 'pending') {
         return res.status(400).json({
           success: false,
@@ -24,7 +22,6 @@ const bookingController = {
         });
       }
 
-      // Check if booking already exists
       const existingBooking = await Booking.findOne({
         where: { shipment_id }
       });
@@ -36,7 +33,6 @@ const bookingController = {
         });
       }
 
-      // Create booking
       const booking = await Booking.create({
         shipment_id,
         carrier_id: req.user.id,
@@ -44,7 +40,6 @@ const bookingController = {
         booking_status: 'pending'
       });
 
-      // Update shipment status
       shipment.current_status = 'confirmed';
       shipment.carrier_id = req.user.id;
       await shipment.save();
@@ -142,7 +137,6 @@ const bookingController = {
       const { carrierId } = req.params;
       const { page = 1, limit = 10 } = req.query;
 
-      // Check authorization
       if (req.user.id !== carrierId && req.user.user_type !== 'admin') {
         return res.status(403).json({
           success: false,
@@ -181,7 +175,7 @@ const bookingController = {
     }
   },
 
-  // Accept booking
+  // ✅ Accept booking (UPDATED)
   acceptBooking: async (req, res) => {
     try {
       const { id } = req.params;
@@ -195,7 +189,6 @@ const bookingController = {
         });
       }
 
-      // Check authorization
       if (req.user.id !== booking.carrier_id && req.user.user_type !== 'admin') {
         return res.status(403).json({
           success: false,
@@ -210,9 +203,23 @@ const bookingController = {
         });
       }
 
+      // ✅ Fetch shipment (needed for tracking)
+      const shipment = await Shipment.findByPk(booking.shipment_id);
+
       booking.booking_status = 'accepted';
       booking.accepted_at = new Date();
       await booking.save();
+
+      // ✅ Auto-create first tracking event
+      await Tracking.create({
+        shipment_id: booking.shipment_id,
+        status: 'picked_up',
+        location: shipment.pickup_location,
+        latitude: 0,
+        longitude: 0,
+        notes: 'Carrier accepted the booking. Pickup in progress.',
+        timestamp: new Date(),
+      });
 
       res.json({
         success: true,
@@ -244,7 +251,6 @@ const bookingController = {
         });
       }
 
-      // Check authorization
       if (req.user.id !== booking.carrier_id && req.user.user_type !== 'admin') {
         return res.status(403).json({
           success: false,
@@ -262,7 +268,6 @@ const bookingController = {
       booking.booking_status = 'declined';
       await booking.save();
 
-      // Reset shipment status
       booking.shipment.current_status = 'pending';
       booking.shipment.carrier_id = null;
       await booking.shipment.save();
@@ -298,7 +303,6 @@ const bookingController = {
         });
       }
 
-      // Check authorization
       if (req.user.id !== booking.carrier_id && req.user.user_type !== 'admin') {
         return res.status(403).json({
           success: false,
@@ -317,7 +321,6 @@ const bookingController = {
       booking.actual_delivery = actual_delivery || new Date();
       await booking.save();
 
-      // Update shipment status
       booking.shipment.current_status = 'delivered';
       await booking.shipment.save();
 
