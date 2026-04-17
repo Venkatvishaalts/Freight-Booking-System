@@ -27,13 +27,18 @@ export default function CarrierDashboard() {
     setFetching(true);
     try {
       const res = await getAllShipments({ status: 'pending' });
+
+      console.log("AVAILABLE API RESPONSE:", res.data);
+
       const data = Array.isArray(res.data)
         ? res.data
         : Array.isArray(res.data.data)
         ? res.data.data
         : [];
+
       setAvailableShipments(data);
-    } catch {
+    } catch (err) {
+      console.error(err);
       toast.error('Failed to load available shipments');
       setAvailableShipments([]);
     } finally {
@@ -45,13 +50,18 @@ export default function CarrierDashboard() {
     setFetching(true);
     try {
       const res = await getCarrierBookings(user.id);
+
+      console.log("BOOKINGS API RESPONSE:", res.data);
+
       const data = Array.isArray(res.data)
         ? res.data
         : Array.isArray(res.data.data)
         ? res.data.data
         : [];
+
       setMyBookings(data);
-    } catch {
+    } catch (err) {
+      console.error(err);
       toast.error('Failed to load your bookings');
       setMyBookings([]);
     } finally {
@@ -64,7 +74,7 @@ export default function CarrierDashboard() {
       if (activeTab === 'available') fetchAvailable();
       else fetchMyBookings();
     }
-  }, [activeTab]);
+  }, [activeTab, user]);
 
   // ================= ACCEPT BOOKING =================
   const handleAccept = async (shipmentId) => {
@@ -80,7 +90,7 @@ export default function CarrierDashboard() {
     }
   };
 
-  // ================= 🚀 UPDATED TRACKING WITH GPS =================
+  // ================= TRACKING =================
   const handleTrackingSubmit = async () => {
     if (!trackingForm.status) {
       toast.error('Status is required');
@@ -100,15 +110,13 @@ export default function CarrierDashboard() {
           const latitude = position.coords.latitude;
           const longitude = position.coords.longitude;
 
-          console.log("📍 LIVE LOCATION:", latitude, longitude);
-
           await addTrackingUpdate({
             shipment_id: trackingModal,
             status: trackingForm.status,
             location: trackingForm.location || "Auto-detected location",
             notes: trackingForm.notes,
-            latitude,   // ✅ NEW
-            longitude   // ✅ NEW
+            latitude,
+            longitude
           });
 
           toast.success('Tracking updated successfully!');
@@ -128,8 +136,7 @@ export default function CarrierDashboard() {
           setSubmitting(false);
         }
       },
-      (error) => {
-        console.error("Location error:", error);
+      () => {
         toast.error("Please allow location access");
         setSubmitting(false);
       }
@@ -137,17 +144,11 @@ export default function CarrierDashboard() {
   };
 
   // ================= UI =================
-  const bookingStatusColors = {
-    pending: 'bg-yellow-100 text-yellow-700',
-    accepted: 'bg-blue-100 text-blue-700',
-    completed: 'bg-green-100 text-green-700',
-    declined: 'bg-red-100 text-red-700',
-  };
-
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-5xl mx-auto">
 
+        {/* HEADER */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-800">
             Carrier Dashboard
@@ -157,7 +158,7 @@ export default function CarrierDashboard() {
           </p>
         </div>
 
-        {/* Tabs */}
+        {/* TABS */}
         <div className="flex gap-4 mb-6 border-b">
           <button
             onClick={() => setActiveTab('available')}
@@ -182,22 +183,62 @@ export default function CarrierDashboard() {
           </button>
         </div>
 
-        {/* BOOKINGS */}
-        {activeTab === 'mybookings' &&
-          myBookings.map((b) => (
-            <div key={b.id} className="bg-white p-4 mb-4 rounded shadow">
-              <p>Shipment ID: {b.shipment_id}</p>
+        {/* ================= AVAILABLE SHIPMENTS ================= */}
+        {activeTab === 'available' && (
+          fetching ? (
+            <p>Loading shipments...</p>
+          ) : availableShipments.length === 0 ? (
+            <p className="text-gray-500">No available shipments</p>
+          ) : (
+            availableShipments.map((s) => {
+              console.log("Shipment object:", s);
 
-              <button
-                onClick={() => setTrackingModal(b.shipment_id)}
-                className="bg-green-600 text-white px-4 py-2 mt-2 rounded"
-              >
-                📍 Update Tracking
-              </button>
-            </div>
+              return (
+                <div key={s.id} className="bg-white p-5 mb-4 rounded shadow">
+
+                  <h2 className="text-lg font-semibold mb-2">
+                    {s.pickup_location} → {s.delivery_location}
+                  </h2>
+
+                  <p className="text-gray-600">Weight: {s.weight} kg</p>
+                  <p className="text-gray-600">Quantity: {s.quantity}</p>
+                  <p className="text-gray-600">Freight Type: {s.freight_type}</p>
+
+                  <button
+                    onClick={() => handleAccept(s.id)}
+                    className="bg-blue-600 text-white px-4 py-2 mt-3 rounded"
+                  >
+                    Accept Shipment
+                  </button>
+
+                </div>
+              );
+            })
+          )
+        )}
+
+        {/* ================= MY BOOKINGS ================= */}
+        {activeTab === 'mybookings' &&
+          (fetching ? (
+            <p>Loading bookings...</p>
+          ) : myBookings.length === 0 ? (
+            <p className="text-gray-500">No bookings yet</p>
+          ) : (
+            myBookings.map((b) => (
+              <div key={b.id} className="bg-white p-4 mb-4 rounded shadow">
+                <p>Shipment ID: {b.shipment_id}</p>
+
+                <button
+                  onClick={() => setTrackingModal(b.shipment_id)}
+                  className="bg-green-600 text-white px-4 py-2 mt-2 rounded"
+                >
+                  📍 Update Tracking
+                </button>
+              </div>
+            ))
           ))}
 
-        {/* MODAL */}
+        {/* ================= TRACKING MODAL ================= */}
         {trackingModal && (
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
             <div className="bg-white p-6 rounded w-96">
@@ -248,9 +289,10 @@ export default function CarrierDashboard() {
 
               <button
                 onClick={handleTrackingSubmit}
+                disabled={submitting}
                 className="bg-blue-600 text-white px-4 py-2 w-full"
               >
-                Submit
+                {submitting ? 'Submitting...' : 'Submit'}
               </button>
 
             </div>
