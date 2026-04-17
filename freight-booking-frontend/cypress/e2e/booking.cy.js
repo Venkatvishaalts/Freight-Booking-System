@@ -56,7 +56,7 @@ describe('Shipment booking flow', () => {
 
     cy.intercept('POST', '**/api/bookings**').as('acceptBooking');
 
-    // ✅ FIXED: exact match selector, not starts-with
+    //  FIXED: exact match selector, not starts-with
     cy.get('[data-cy=shipment-card]', { timeout: 10000 })
       .should('have.length.greaterThan', 0)
       .first()
@@ -64,7 +64,7 @@ describe('Shipment booking flow', () => {
       .should('be.visible')
       .click();
 
-    // ✅ Allow both 201 (new) and 409 (already booked) as valid
+    //  Allow both 201 (new) and 409 (already booked) as valid
     cy.wait('@acceptBooking').its('response.statusCode').should('be.oneOf', [201, 409]);
 
     cy.url().should('include', '/carrier/dashboard');

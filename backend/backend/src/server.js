@@ -3,8 +3,8 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const http = require('http'); // ✅ NEW
-const { Server } = require('socket.io'); // ✅ NEW
+const http = require('http'); // 
+const { Server } = require('socket.io');
 const sequelize = require('./config/database');
 
 const app = express();
@@ -12,7 +12,7 @@ const app = express();
 // ============================================================================
 // CREATE HTTP SERVER (IMPORTANT FOR SOCKET.IO)
 // ============================================================================
-const server = http.createServer(app); // ✅ NEW
+const server = http.createServer(app); 
 
 // ============================================================================
 // SOCKET.IO SETUP
@@ -40,11 +40,11 @@ io.on('connection', (socket) => {
   // Join shipment room
   socket.on('joinShipment', (shipmentId) => {
     socket.join(shipmentId);
-    console.log(`📦 Socket ${socket.id} joined shipment ${shipmentId}`);
+    console.log(` Socket ${socket.id} joined shipment ${shipmentId}`);
   });
 
   socket.on('disconnect', () => {
-    console.log('❌ User disconnected:', socket.id);
+    console.log(' User disconnected:', socket.id);
   });
 });
 
@@ -96,10 +96,10 @@ app.use(express.urlencoded({ limit: '10mb', extended: true }));
 // ============================================================================
 sequelize.authenticate()
   .then(() => {
-    console.log('✅ Database connection established');
+    console.log(' Database connection established');
   })
   .catch(err => {
-    console.error('❌ Unable to connect to database:', err);
+    console.error(' Unable to connect to database:', err);
     process.exit(1);
   });
 
@@ -164,9 +164,9 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
-server.listen(PORT, () => { // ✅ CHANGED (app → server)
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📝 API Base URL: http://localhost:${PORT}/api`);
+server.listen(PORT, () => { // CHANGED (app → server)
+  console.log(` Server running on http://localhost:${PORT}`);
+  console.log(` API Base URL: http://localhost:${PORT}/api`);
 });
 
 module.exports = app;

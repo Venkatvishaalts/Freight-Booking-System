@@ -37,10 +37,10 @@ const sequelize = process.env.DATABASE_URL
 // Test connection
 sequelize.authenticate()
   .then(() => {
-    console.log('✅ Database connection established successfully');
+    console.log('Database connection established successfully');
   })
   .catch(err => {
-    console.error('❌ Unable to connect to database:', err);
+    console.error(' Unable to connect to database:', err);
     process.exit(1);
   });
 

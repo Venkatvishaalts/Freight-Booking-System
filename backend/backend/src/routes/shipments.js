@@ -18,7 +18,6 @@ router.get('/',
   shipmentController.getAllShipments
 );
 
-// ✅ MOVED UP — must be before /:id
 // GET /api/shipments/shipper/:shipperId - Get shipper's shipments
 router.get('/shipper/:shipperId',
   authMiddleware,

@@ -58,5 +58,4 @@ const authorize = (...roles) => {
   };
 };
 
-// ✅ THIS WAS MISSING
 module.exports = { authMiddleware, authorize };

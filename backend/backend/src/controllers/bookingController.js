@@ -175,7 +175,7 @@ const bookingController = {
     }
   },
 
-  // ✅ Accept booking (UPDATED)
+  //  Accept booking (UPDATED)
   acceptBooking: async (req, res) => {
     try {
       const { id } = req.params;
@@ -203,14 +203,14 @@ const bookingController = {
         });
       }
 
-      // ✅ Fetch shipment (needed for tracking)
+      //  Fetch shipment (needed for tracking)
       const shipment = await Shipment.findByPk(booking.shipment_id);
 
       booking.booking_status = 'accepted';
       booking.accepted_at = new Date();
       await booking.save();
 
-      // ✅ Auto-create first tracking event
+      //  Auto-create first tracking event
       await Tracking.create({
         shipment_id: booking.shipment_id,
         status: 'picked_up',

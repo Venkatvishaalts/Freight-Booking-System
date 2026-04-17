@@ -113,7 +113,7 @@ const shipmentController = {
     }
   },
 
-  // ================= ✅ NEW: GET SHIPPER SHIPMENTS =================
+  // =================  NEW: GET SHIPPER SHIPMENTS =================
   getShipperShipments: async (req, res) => {
     try {
       const { shipperId } = req.params;

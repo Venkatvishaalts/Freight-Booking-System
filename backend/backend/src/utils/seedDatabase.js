@@ -3,7 +3,7 @@ const { User, Shipment, Booking, Vehicle } = require('../models');
 
 const seedDatabase = async () => {
   try {
-    console.log('🌱 Starting database seeding...');
+    console.log(' Starting database seeding...');
 
     // Clear existing data (optional)
     await User.destroy({ where: {} });
@@ -147,8 +147,8 @@ const seedDatabase = async () => {
       accepted_at: new Date()
     });
 
-    console.log('✅ Database seeded successfully!');
-    console.log('\n📊 Seed Data Created:');
+    console.log(' Database seeded successfully!');
+    console.log('\n Seed Data Created:');
     console.log('   - 2 Shippers');
     console.log('   - 2 Carriers');
     console.log('   - 1 Admin');
@@ -156,7 +156,7 @@ const seedDatabase = async () => {
     console.log('   - 3 Shipments');
     console.log('   - 1 Booking');
   } catch (error) {
-    console.error('❌ Error seeding database:', error);
+    console.error(' Error seeding database:', error);
     throw error;
   }
 };
