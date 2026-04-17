@@ -50,7 +50,7 @@ const shipmentController = {
     }
   },
 
-  // Get all shipments (UNCHANGED)
+  // Get all shipments
   getAllShipments: async (req, res) => {
     try {
       const {
@@ -111,7 +111,7 @@ const shipmentController = {
     }
   },
 
-  // Get single shipment (UNCHANGED)
+  // Get single shipment
   getShipment: async (req, res) => {
     try {
       const { id } = req.params;
@@ -146,7 +146,52 @@ const shipmentController = {
     }
   },
 
-  // ✅ UPDATED: Shipment update with REAL-TIME tracking
+  // ✅ FIXED: Get shipper's shipments (THIS WAS MISSING)
+  getShipperShipments: async (req, res) => {
+    try {
+      const { shipperId } = req.params;
+      const { page = 1, limit = 10 } = req.query;
+
+      if (req.user.id !== shipperId && req.user.user_type !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          message: 'You do not have permission to view these shipments'
+        });
+      }
+
+      const offset = (page - 1) * limit;
+
+      const { count, rows } = await Shipment.findAndCountAll({
+        where: { shipper_id: shipperId },
+        include: [
+          { association: 'carrier', attributes: ['id', 'username', 'company_name'] }
+        ],
+        offset,
+        limit: parseInt(limit),
+        order: [['created_at', 'DESC']]
+      });
+
+      res.json({
+        success: true,
+        data: rows,
+        pagination: {
+          total: count,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          pages: Math.ceil(count / limit)
+        }
+      });
+
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch shipments',
+        error: error.message
+      });
+    }
+  },
+
+  // Update shipment (REAL-TIME ENABLED)
   updateShipment: async (req, res) => {
     try {
       const { id } = req.params;
@@ -163,7 +208,7 @@ const shipmentController = {
 
       const isShipper = req.user.id === shipment.shipper_id;
       const isCarrier = req.user.id === shipment.carrier_id;
-      const isAdmin   = req.user.user_type === 'admin';
+      const isAdmin = req.user.user_type === 'admin';
 
       if (!isShipper && !isCarrier && !isAdmin) {
         return res.status(403).json({
@@ -172,9 +217,7 @@ const shipmentController = {
         });
       }
 
-      // ─────────────────────────────────────────────
-      // 🚚 CARRIER UPDATE (REAL-TIME ENABLED)
-      // ─────────────────────────────────────────────
+      // 🚚 Carrier update
       if (isCarrier && !isShipper && !isAdmin) {
         const { current_status, latitude, longitude, location, notes } = updateData;
 
@@ -200,7 +243,6 @@ const shipmentController = {
           });
         }
 
-        // Update shipment
         shipment.current_status = current_status;
 
         if (current_status === 'delivered') {
@@ -209,7 +251,6 @@ const shipmentController = {
 
         await shipment.save();
 
-        // ✅ Create tracking entry
         const tracking = await Tracking.create({
           shipment_id: shipment.id,
           status: current_status,
@@ -220,7 +261,7 @@ const shipmentController = {
           timestamp: new Date(),
         });
 
-        // 🔥 SOCKET EMIT (THIS IS THE KEY ADDITION)
+        // 🔥 REAL-TIME SOCKET EMIT
         const io = req.app.get('io');
 
         if (io) {
@@ -242,9 +283,7 @@ const shipmentController = {
         });
       }
 
-      // ─────────────────────────────────────────────
-      // 🧑‍💼 SHIPPER / ADMIN UPDATE
-      // ─────────────────────────────────────────────
+      // Shipper/Admin update
       if (['in_transit', 'delivered', 'cancelled'].includes(shipment.current_status)) {
         return res.status(400).json({
           success: false,
@@ -287,7 +326,7 @@ const shipmentController = {
     }
   },
 
-  // Cancel shipment (UNCHANGED)
+  // Cancel shipment
   cancelShipment: async (req, res) => {
     try {
       const { id } = req.params;
