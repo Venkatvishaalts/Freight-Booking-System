@@ -25,11 +25,13 @@ const statusLabels = {
 
 function MapUpdater({ lat, lng }) {
   const map = useMap();
+
   useEffect(() => {
     if (lat && lng) {
       map.setView([lat, lng], 10, { animate: true });
     }
   }, [lat, lng, map]);
+
   return null;
 }
 
@@ -38,7 +40,7 @@ export default function TrackingPage() {
 
   const [trackingData, setTrackingData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [lastUpdated, setLastUpdated] = useState(null); // ✅ ADDED
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   const intervalRef = useRef(null);
   const socketRef = useRef(null);
@@ -55,8 +57,9 @@ export default function TrackingPage() {
         [];
 
       setTrackingData(data);
-      setLastUpdated(new Date()); // ✅ UPDATE TIME
+      setLastUpdated(new Date());
     } catch (err) {
+      console.error('Fetch error:', err);
       toast.error('Failed to load tracking');
       setTrackingData([]);
     } finally {
@@ -64,28 +67,42 @@ export default function TrackingPage() {
     }
   };
 
-  // ── SOCKET SETUP (FINAL FIXED)
+  // ── SOCKET SETUP (PRODUCTION READY)
   useEffect(() => {
     if (!shipmentId) return;
 
-    // ✅ Create socket
-    socketRef.current = io(process.env.REACT_APP_API_URL || 'http://localhost:5000');
+    const SOCKET_URL =
+      process.env.REACT_APP_API_URL ||
+      'https://freight-booking-system.onrender.com';
+
+    // 🔥 Create socket with proper config
+    socketRef.current = io(SOCKET_URL, {
+      transports: ['websocket'], // REQUIRED for Render
+      withCredentials: true,
+      reconnection: true,
+      reconnectionAttempts: 5,
+      timeout: 10000,
+    });
 
     const socket = socketRef.current;
 
-    // Debug (very useful)
+    // ✅ Debug logs
     socket.on('connect', () => {
       console.log('✅ Socket connected:', socket.id);
     });
 
-    // Join room
+    socket.on('connect_error', (err) => {
+      console.error('❌ Socket error:', err.message);
+    });
+
+    // Join shipment room
     socket.emit('joinShipment', shipmentId);
     console.log('📦 Joined shipment:', shipmentId);
 
     // Prevent duplicate listeners
     socket.off('trackingUpdated');
 
-    // Listen for live updates
+    // 🔥 Listen for real-time updates
     socket.on('trackingUpdated', (data) => {
       console.log('🔥 Live update:', data);
 
@@ -101,7 +118,7 @@ export default function TrackingPage() {
     };
   }, [shipmentId]);
 
-  // ── POLLING (fallback)
+  // ── POLLING (fallback safety)
   useEffect(() => {
     fetchTracking();
 
@@ -148,8 +165,13 @@ export default function TrackingPage() {
       )}
 
       <div style={{ height: 400 }}>
-        <MapContainer center={[latestLat, latestLng]} zoom={10} style={{ height: '100%' }}>
+        <MapContainer
+          center={[latestLat, latestLng]}
+          zoom={10}
+          style={{ height: '100%' }}
+        >
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+
           <MapUpdater lat={latestLat} lng={latestLng} />
 
           {positions.length > 1 && (
