@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
+import { io } from 'socket.io-client';
+
 import { getAllShipments } from '../services/shipmentService';
 import { createBooking, getCarrierBookings } from '../services/bookingService';
 import { addTrackingUpdate } from '../services/trackingService';
@@ -20,9 +22,57 @@ export default function CarrierDashboard() {
     notes: ''
   });
 
-  const [submitting, setSubmitting] = useState(false);
+  const socketRef = useRef(null);
 
-  // ================= FETCH DATA =================
+  // ================= SOCKET SETUP =================
+  useEffect(() => {
+    if (!user) return;
+
+    const SOCKET_URL =
+      process.env.REACT_APP_API_URL ||
+      'https://freight-booking-system.onrender.com';
+
+    socketRef.current = io(SOCKET_URL, {
+      transports: ['websocket'],
+    });
+
+    const socket = socketRef.current;
+
+    socket.on('connect', () => {
+      console.log('✅ Dashboard socket connected:', socket.id);
+    });
+
+    socket.on('connect_error', (err) => {
+      console.error('❌ Socket error:', err.message);
+    });
+
+    // 🔥 Join all shipment rooms
+    myBookings.forEach((b) => {
+      socket.emit('joinShipment', b.shipment_id);
+    });
+
+    // 🔥 Listen for live updates
+    socket.on('trackingUpdated', (data) => {
+      console.log('🔥 Dashboard update:', data);
+
+      // Update UI instantly
+      setMyBookings((prev) =>
+        prev.map((b) =>
+          b.shipment_id === data.shipment_id
+            ? { ...b, live_status: data.status }
+            : b
+        )
+      );
+
+      toast.info('📍 Shipment updated!');
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [myBookings]);
+
+  // ================= FETCH =================
   const fetchAvailable = async () => {
     setFetching(true);
     try {
@@ -35,7 +85,6 @@ export default function CarrierDashboard() {
       setAvailableShipments(data);
     } catch {
       toast.error('Failed to load available shipments');
-      setAvailableShipments([]);
     } finally {
       setFetching(false);
     }
@@ -53,7 +102,6 @@ export default function CarrierDashboard() {
       setMyBookings(data);
     } catch {
       toast.error('Failed to load your bookings');
-      setMyBookings([]);
     } finally {
       setFetching(false);
     }
@@ -66,7 +114,7 @@ export default function CarrierDashboard() {
     }
   }, [activeTab]);
 
-  // ================= ACCEPT BOOKING =================
+  // ================= ACCEPT =================
   const handleAccept = async (shipmentId) => {
     try {
       await createBooking({
@@ -75,189 +123,101 @@ export default function CarrierDashboard() {
       });
       toast.success('Booking accepted!');
       fetchAvailable();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Could not accept booking');
+    } catch {
+      toast.error('Could not accept booking');
     }
   };
 
-  // ================= 🚀 UPDATED TRACKING WITH GPS =================
+  // ================= TRACKING =================
   const handleTrackingSubmit = async () => {
     if (!trackingForm.status) {
       toast.error('Status is required');
       return;
     }
 
-    if (!navigator.geolocation) {
-      toast.error('Geolocation is not supported');
-      return;
-    }
-
-    setSubmitting(true);
-
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         try {
-          const latitude = position.coords.latitude;
-          const longitude = position.coords.longitude;
-
-          console.log("📍 LIVE LOCATION:", latitude, longitude);
-
           await addTrackingUpdate({
             shipment_id: trackingModal,
             status: trackingForm.status,
-            location: trackingForm.location || "Auto-detected location",
+            location: trackingForm.location || "Auto-detected",
             notes: trackingForm.notes,
-            latitude,   // ✅ NEW
-            longitude   // ✅ NEW
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude
           });
 
-          toast.success('Tracking updated successfully!');
-
+          toast.success('Tracking updated!');
           setTrackingModal(null);
-          setTrackingForm({
-            status: '',
-            location: '',
-            notes: ''
-          });
-
-        } catch (err) {
-          toast.error(
-            err.response?.data?.message || 'Failed to update tracking'
-          );
-        } finally {
-          setSubmitting(false);
+          fetchMyBookings(); // refresh
+        } catch {
+          toast.error('Failed to update tracking');
         }
       },
-      (error) => {
-        console.error("Location error:", error);
-        toast.error("Please allow location access");
-        setSubmitting(false);
-      }
+      () => toast.error('Enable location')
     );
   };
 
   // ================= UI =================
-  const bookingStatusColors = {
-    pending: 'bg-yellow-100 text-yellow-700',
-    accepted: 'bg-blue-100 text-blue-700',
-    completed: 'bg-green-100 text-green-700',
-    declined: 'bg-red-100 text-red-700',
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-5xl mx-auto">
+    <div className="p-6">
+      <h1 className="text-xl font-bold">Carrier Dashboard</h1>
 
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">
-            Carrier Dashboard
-          </h1>
-          <p className="text-gray-500 text-sm">
-            Welcome, {user?.username}
-          </p>
-        </div>
+      {/* BOOKINGS */}
+      {activeTab === 'mybookings' &&
+        myBookings.map((b) => (
+          <div key={b.id} className="bg-white p-4 mt-4 shadow rounded">
 
-        {/* Tabs */}
-        <div className="flex gap-4 mb-6 border-b">
-          <button
-            onClick={() => setActiveTab('available')}
-            className={`pb-2 ${
-              activeTab === 'available'
-                ? 'border-blue-600 text-blue-600'
-                : 'text-gray-500'
-            }`}
-          >
-            Available Shipments
-          </button>
+            <p>Shipment ID: {b.shipment_id}</p>
 
-          <button
-            onClick={() => setActiveTab('mybookings')}
-            className={`pb-2 ${
-              activeTab === 'mybookings'
-                ? 'border-blue-600 text-blue-600'
-                : 'text-gray-500'
-            }`}
-          >
-            My Bookings
-          </button>
-        </div>
+            {/* 🔥 LIVE STATUS */}
+            <p className="text-sm mt-1">
+              Status:
+              <span className="ml-2 font-bold text-blue-600">
+                {b.live_status || b.status || 'pending'}
+              </span>
+            </p>
 
-        {/* BOOKINGS */}
-        {activeTab === 'mybookings' &&
-          myBookings.map((b) => (
-            <div key={b.id} className="bg-white p-4 mb-4 rounded shadow">
-              <p>Shipment ID: {b.shipment_id}</p>
-
-              <button
-                onClick={() => setTrackingModal(b.shipment_id)}
-                className="bg-green-600 text-white px-4 py-2 mt-2 rounded"
-              >
-                📍 Update Tracking
-              </button>
-            </div>
-          ))}
-
-        {/* MODAL */}
-        {trackingModal && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-            <div className="bg-white p-6 rounded w-96">
-
-              <h2 className="text-lg font-bold mb-4">
-                Update Tracking
-              </h2>
-
-              <select
-                value={trackingForm.status}
-                onChange={(e) =>
-                  setTrackingForm({
-                    ...trackingForm,
-                    status: e.target.value
-                  })
-                }
-                className="w-full mb-3 border p-2"
-              >
-                <option value="">Select Status</option>
-                <option value="picked_up">Picked Up</option>
-                <option value="in_transit">In Transit</option>
-                <option value="delivered">Delivered</option>
-              </select>
-
-              <input
-                placeholder="Location (optional)"
-                value={trackingForm.location}
-                onChange={(e) =>
-                  setTrackingForm({
-                    ...trackingForm,
-                    location: e.target.value
-                  })
-                }
-                className="w-full mb-3 border p-2"
-              />
-
-              <textarea
-                placeholder="Notes"
-                value={trackingForm.notes}
-                onChange={(e) =>
-                  setTrackingForm({
-                    ...trackingForm,
-                    notes: e.target.value
-                  })
-                }
-                className="w-full mb-3 border p-2"
-              />
-
-              <button
-                onClick={handleTrackingSubmit}
-                className="bg-blue-600 text-white px-4 py-2 w-full"
-              >
-                Submit
-              </button>
-
-            </div>
+            <button
+              onClick={() => setTrackingModal(b.shipment_id)}
+              className="bg-green-600 text-white px-3 py-1 mt-2 rounded"
+            >
+              📍 Update Tracking
+            </button>
           </div>
-        )}
+        ))}
 
-      </div>
+      {/* MODAL */}
+      {trackingModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white p-5 rounded w-80">
+
+            <select
+              value={trackingForm.status}
+              onChange={(e) =>
+                setTrackingForm({
+                  ...trackingForm,
+                  status: e.target.value
+                })
+              }
+              className="w-full mb-3 border p-2"
+            >
+              <option value="">Select Status</option>
+              <option value="picked_up">Picked Up</option>
+              <option value="in_transit">In Transit</option>
+              <option value="delivered">Delivered</option>
+            </select>
+
+            <button
+              onClick={handleTrackingSubmit}
+              className="bg-blue-600 text-white w-full py-2"
+            >
+              Submit
+            </button>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }
