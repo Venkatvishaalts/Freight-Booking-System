@@ -67,7 +67,7 @@ export default function TrackingPage() {
     }
   };
 
-  // ── SOCKET SETUP (PRODUCTION READY)
+  // ── SOCKET SETUP (FIXED FOR RENDER)
   useEffect(() => {
     if (!shipmentId) return;
 
@@ -75,9 +75,9 @@ export default function TrackingPage() {
       process.env.REACT_APP_API_URL ||
       'https://freight-booking-system.onrender.com';
 
-    // 🔥 Create socket with proper config
+    // ✅ FIXED: allow polling fallback
     socketRef.current = io(SOCKET_URL, {
-      transports: ['websocket'], // REQUIRED for Render
+      transports: ['polling', 'websocket'], // 🔥 IMPORTANT FIX
       withCredentials: true,
       reconnection: true,
       reconnectionAttempts: 5,
@@ -86,7 +86,6 @@ export default function TrackingPage() {
 
     const socket = socketRef.current;
 
-    // ✅ Debug logs
     socket.on('connect', () => {
       console.log('✅ Socket connected:', socket.id);
     });
@@ -95,14 +94,12 @@ export default function TrackingPage() {
       console.error('❌ Socket error:', err.message);
     });
 
-    // Join shipment room
+    // Join room
     socket.emit('joinShipment', shipmentId);
     console.log('📦 Joined shipment:', shipmentId);
 
-    // Prevent duplicate listeners
     socket.off('trackingUpdated');
 
-    // 🔥 Listen for real-time updates
     socket.on('trackingUpdated', (data) => {
       console.log('🔥 Live update:', data);
 
@@ -118,7 +115,7 @@ export default function TrackingPage() {
     };
   }, [shipmentId]);
 
-  // ── POLLING (fallback safety)
+  // ── POLLING (fallback)
   useEffect(() => {
     fetchTracking();
 
@@ -129,12 +126,10 @@ export default function TrackingPage() {
     return () => clearInterval(intervalRef.current);
   }, [shipmentId]);
 
-  // ── LOADING
   if (loading) {
     return <div className="p-10 text-center">Loading tracking...</div>;
   }
 
-  // ── EMPTY
   if (trackingData.length === 0) {
     return <div className="p-10 text-center">No tracking data yet</div>;
   }

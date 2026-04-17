@@ -3,19 +3,19 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const http = require('http'); // ✅ NEW
-const { Server } = require('socket.io'); // ✅ NEW
+const http = require('http');
+const { Server } = require('socket.io');
 const sequelize = require('./config/database');
 
 const app = express();
 
 // ============================================================================
-// CREATE HTTP SERVER (IMPORTANT FOR SOCKET.IO)
+// CREATE HTTP SERVER (REQUIRED FOR SOCKET.IO)
 // ============================================================================
-const server = http.createServer(app); // ✅ NEW
+const server = http.createServer(app);
 
 // ============================================================================
-// SOCKET.IO SETUP
+// SOCKET.IO SETUP (🔥 FINAL FIX)
 // ============================================================================
 const io = new Server(server, {
   cors: {
@@ -23,11 +23,13 @@ const io = new Server(server, {
       'http://localhost:3000',
       'http://localhost:3001',
       'http://localhost:5173',
-      process.env.FRONTEND_URL
+      process.env.FRONTEND_URL,
+      'https://freight-booking-system.vercel.app'
     ],
     methods: ['GET', 'POST'],
     credentials: true
-  }
+  },
+  transports: ['polling', 'websocket'], // 🔥 IMPORTANT FIX
 });
 
 // Make io accessible in controllers
@@ -52,14 +54,14 @@ io.on('connection', (socket) => {
 // MIDDLEWARE
 // ============================================================================
 
-// CORS must be FIRST
 app.use(cors({
   origin: function (origin, callback) {
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:3001',
       'http://localhost:5173',
-      process.env.FRONTEND_URL
+      process.env.FRONTEND_URL,
+      'https://freight-booking-system.vercel.app'
     ];
 
     if (!origin) return callback(null, true);
@@ -74,40 +76,29 @@ app.use(cors({
     return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  optionsSuccessStatus: 200
 }));
 
-// Security headers
 app.use(helmet({
   crossOriginResourcePolicy: false,
 }));
 
-// Logging
 app.use(morgan('combined'));
-
-// Body parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // ============================================================================
-// DATABASE CONNECTION
+// DATABASE
 // ============================================================================
 sequelize.authenticate()
-  .then(() => {
-    console.log('✅ Database connection established');
-  })
+  .then(() => console.log('✅ Database connected'))
   .catch(err => {
-    console.error('❌ Unable to connect to database:', err);
+    console.error('❌ DB error:', err);
     process.exit(1);
   });
 
 // ============================================================================
 // ROUTES
 // ============================================================================
-
-// Health check
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'Server is running',
@@ -116,26 +107,16 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Routes
-const authRoutes = require('./routes/auth');
-const shipmentRoutes = require('./routes/shipments');
-const bookingRoutes = require('./routes/bookings');
-const trackingRoutes = require('./routes/tracking');
-const userRoutes = require('./routes/users');
-const reviewRoutes = require('./routes/reviews');
-
-app.use('/api/auth', authRoutes);
-app.use('/api/shipments', shipmentRoutes);
-app.use('/api/bookings', bookingRoutes);
-app.use('/api/tracking', trackingRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/reviews', reviewRoutes);
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/shipments', require('./routes/shipments'));
+app.use('/api/bookings', require('./routes/bookings'));
+app.use('/api/tracking', require('./routes/tracking'));
+app.use('/api/users', require('./routes/users'));
+app.use('/api/reviews', require('./routes/reviews'));
 
 // ============================================================================
 // ERROR HANDLING
 // ============================================================================
-
-// 404
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -144,29 +125,20 @@ app.use((req, res) => {
   });
 });
 
-// Global error handler
 app.use((err, req, res, next) => {
   console.error('Error:', err);
 
-  const statusCode = err.statusCode || 500;
-  const message = err.message || 'Internal Server Error';
-
-  res.status(statusCode).json({
+  res.status(err.statusCode || 500).json({
     success: false,
-    message,
-    ...(process.env.NODE_ENV === 'development' && { error: err.stack })
+    message: err.message || 'Internal Server Error'
   });
 });
 
 // ============================================================================
-// START SERVER (IMPORTANT CHANGE HERE)
+// START SERVER
 // ============================================================================
-
 const PORT = process.env.PORT || 5000;
 
-server.listen(PORT, () => { // ✅ CHANGED (app → server)
+server.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📝 API Base URL: http://localhost:${PORT}/api`);
 });
-
-module.exports = app;
