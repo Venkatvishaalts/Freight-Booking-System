@@ -6,3 +6,6 @@ export const createShipment = (data) => api.post('/shipments', data);
 export const updateShipment = (id, data) => api.put(`/shipments/${id}`, data);
 export const deleteShipment = (id) => api.delete(`/shipments/${id}`);
 export const getShipperShipments = (shipperId) => api.get(`/shipments/shipper/${shipperId}`);
+
+// ✅ Add this
+export const cancelShipment = (id) => api.patch(`/shipments/${id}/cancel`);
