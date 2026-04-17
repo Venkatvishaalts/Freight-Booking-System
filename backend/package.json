@@ -10,7 +10,7 @@
     "db:seed": "node backend/src/scripts/initDatabase.js --seed",
     "db:reset": "node backend/scripts/initDatabase.js --seed --reset",
     "test:models": "node backend/src/scripts/testModels.js",
-    "test:api":"jest --watch"
+    "test:api": "jest --watch"
   },
   "keywords": [],
   "author": "",
@@ -28,6 +28,7 @@
     "morgan": "^1.10.1",
     "nodemon": "^3.1.14",
     "pg": "^8.20.0",
-    "sequelize": "^6.37.8"
+    "sequelize": "^6.37.8",
+    "socket.io": "^4.8.3"
   }
 }

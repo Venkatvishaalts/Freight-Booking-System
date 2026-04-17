@@ -2,6 +2,7 @@ const { Shipment, User, Booking, Tracking } = require('../models');
 const { Op } = require('sequelize');
 
 const shipmentController = {
+
   // Create new shipment
   createShipment: async (req, res) => {
     try {
@@ -49,7 +50,7 @@ const shipmentController = {
     }
   },
 
-  // Get all shipments with filters
+  // Get all shipments (UNCHANGED)
   getAllShipments: async (req, res) => {
     try {
       const {
@@ -110,7 +111,7 @@ const shipmentController = {
     }
   },
 
-  // Get single shipment
+  // Get single shipment (UNCHANGED)
   getShipment: async (req, res) => {
     try {
       const { id } = req.params;
@@ -145,51 +146,7 @@ const shipmentController = {
     }
   },
 
-  // Get shipper's shipments
-  getShipperShipments: async (req, res) => {
-    try {
-      const { shipperId } = req.params;
-      const { page = 1, limit = 10 } = req.query;
-
-      if (req.user.id !== shipperId && req.user.user_type !== 'admin') {
-        return res.status(403).json({
-          success: false,
-          message: 'You do not have permission to view these shipments'
-        });
-      }
-
-      const offset = (page - 1) * limit;
-
-      const { count, rows } = await Shipment.findAndCountAll({
-        where: { shipper_id: shipperId },
-        include: [
-          { association: 'carrier', attributes: ['id', 'username', 'company_name'] }
-        ],
-        offset,
-        limit: parseInt(limit),
-        order: [['created_at', 'DESC']]
-      });
-
-      res.json({
-        success: true,
-        data: rows,
-        pagination: {
-          total: count,
-          page: parseInt(page),
-          limit: parseInt(limit),
-          pages: Math.ceil(count / limit)
-        }
-      });
-    } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: 'Failed to fetch shipments',
-        error: error.message
-      });
-    }
-  },
-
-  // ✅ Update shipment (MODIFIED)
+  // ✅ UPDATED: Shipment update with REAL-TIME tracking
   updateShipment: async (req, res) => {
     try {
       const { id } = req.params;
@@ -215,7 +172,9 @@ const shipmentController = {
         });
       }
 
-      // ── ✅ REPLACED CARRIER BLOCK ───────────────────────────
+      // ─────────────────────────────────────────────
+      // 🚚 CARRIER UPDATE (REAL-TIME ENABLED)
+      // ─────────────────────────────────────────────
       if (isCarrier && !isShipper && !isAdmin) {
         const { current_status, latitude, longitude, location, notes } = updateData;
 
@@ -226,21 +185,22 @@ const shipmentController = {
           });
         }
 
-        const carrierAllowedStatuses = ['in_transit', 'out_for_delivery', 'delivered'];
-        if (!carrierAllowedStatuses.includes(current_status)) {
+        const allowedStatuses = ['in_transit', 'out_for_delivery', 'delivered'];
+        if (!allowedStatuses.includes(current_status)) {
           return res.status(400).json({
             success: false,
-            message: `Carriers can only set status to: ${carrierAllowedStatuses.join(', ')}`
+            message: `Allowed: ${allowedStatuses.join(', ')}`
           });
         }
 
         if (['delivered', 'cancelled'].includes(shipment.current_status)) {
           return res.status(400).json({
             success: false,
-            message: 'Cannot update a shipment that is already delivered or cancelled'
+            message: 'Shipment already completed or cancelled'
           });
         }
 
+        // Update shipment
         shipment.current_status = current_status;
 
         if (current_status === 'delivered') {
@@ -249,8 +209,8 @@ const shipmentController = {
 
         await shipment.save();
 
-        // ✅ Tracking event
-        await Tracking.create({
+        // ✅ Create tracking entry
+        const tracking = await Tracking.create({
           shipment_id: shipment.id,
           status: current_status,
           location: location || shipment.delivery_location,
@@ -260,6 +220,21 @@ const shipmentController = {
           timestamp: new Date(),
         });
 
+        // 🔥 SOCKET EMIT (THIS IS THE KEY ADDITION)
+        const io = req.app.get('io');
+
+        if (io) {
+          io.to(shipment.id).emit('trackingUpdated', {
+            shipment_id: shipment.id,
+            status: current_status,
+            location: tracking.location,
+            latitude: tracking.latitude,
+            longitude: tracking.longitude,
+            notes: tracking.notes,
+            timestamp: tracking.timestamp
+          });
+        }
+
         return res.json({
           success: true,
           message: 'Shipment status updated successfully',
@@ -267,11 +242,13 @@ const shipmentController = {
         });
       }
 
-      // ── SHIPPER / ADMIN ───────────────────────────
+      // ─────────────────────────────────────────────
+      // 🧑‍💼 SHIPPER / ADMIN UPDATE
+      // ─────────────────────────────────────────────
       if (['in_transit', 'delivered', 'cancelled'].includes(shipment.current_status)) {
         return res.status(400).json({
           success: false,
-          message: 'Cannot edit shipment details once it is in transit, delivered, or cancelled'
+          message: 'Cannot edit after shipment started'
         });
       }
 
@@ -300,6 +277,7 @@ const shipmentController = {
         message: 'Shipment updated successfully',
         data: shipment
       });
+
     } catch (error) {
       res.status(500).json({
         success: false,
@@ -309,7 +287,7 @@ const shipmentController = {
     }
   },
 
-  // Cancel shipment
+  // Cancel shipment (UNCHANGED)
   cancelShipment: async (req, res) => {
     try {
       const { id } = req.params;
@@ -326,14 +304,14 @@ const shipmentController = {
       if (req.user.id !== shipment.shipper_id && req.user.user_type !== 'admin') {
         return res.status(403).json({
           success: false,
-          message: 'You do not have permission to cancel this shipment'
+          message: 'No permission'
         });
       }
 
       if (shipment.current_status === 'delivered') {
         return res.status(400).json({
           success: false,
-          message: 'Cannot cancel a delivered shipment'
+          message: 'Cannot cancel delivered shipment'
         });
       }
 
@@ -345,6 +323,7 @@ const shipmentController = {
         message: 'Shipment cancelled successfully',
         data: shipment
       });
+
     } catch (error) {
       res.status(500).json({
         success: false,
