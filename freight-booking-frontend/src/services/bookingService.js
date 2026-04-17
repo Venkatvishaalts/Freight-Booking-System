@@ -1,7 +1,29 @@
 import api from './api';
 
-export const createBooking = (data) => api.post('/bookings', data);
-export const getBookingById = (id) => api.get(`/bookings/${id}`);
-export const updateBooking = (id, data) => api.put(`/bookings/${id}`, data);
-export const getCarrierBookings = (carrierId) => api.get(`/bookings/carrier/${carrierId}`);
-export const getAllBookings = () => api.get('/bookings');
+// ================= CREATE =================
+export const createBooking = (data) => {
+  return api.post('/bookings', data);
+};
+
+// ================= GET =================
+export const getBookingById = (id) => {
+  return api.get(`/bookings/${id}`);
+};
+
+export const getCarrierBookings = (carrierId) => {
+  return api.get(`/bookings/carrier/${carrierId}`);
+};
+
+export const getAllBookings = () => {
+  return api.get('/bookings');
+};
+
+// ================= UPDATE =================
+export const updateBooking = (id, data) => {
+  return api.put(`/bookings/${id}`, data);
+};
+
+// ================= ✅ NEW: ACCEPT BOOKING =================
+export const acceptBooking = (bookingId) => {
+  return api.put(`/bookings/${bookingId}/accept`);
+};

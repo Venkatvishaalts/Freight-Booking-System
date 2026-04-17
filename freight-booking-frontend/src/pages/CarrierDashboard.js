@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 import { getAllShipments } from '../services/shipmentService';
-import { createBooking, getCarrierBookings } from '../services/bookingService';
+import { createBooking, getCarrierBookings, acceptBooking } from '../services/bookingService'; // ✅ UPDATED
 import { addTrackingUpdate } from '../services/trackingService';
 
 export default function CarrierDashboard() {
@@ -28,8 +28,6 @@ export default function CarrierDashboard() {
     try {
       const res = await getAllShipments({ status: 'pending' });
 
-      console.log("AVAILABLE API RESPONSE:", res.data);
-
       const data = Array.isArray(res.data)
         ? res.data
         : Array.isArray(res.data.data)
@@ -37,8 +35,7 @@ export default function CarrierDashboard() {
         : [];
 
       setAvailableShipments(data);
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast.error('Failed to load available shipments');
       setAvailableShipments([]);
     } finally {
@@ -51,8 +48,6 @@ export default function CarrierDashboard() {
     try {
       const res = await getCarrierBookings(user.id);
 
-      console.log("BOOKINGS API RESPONSE:", res.data);
-
       const data = Array.isArray(res.data)
         ? res.data
         : Array.isArray(res.data.data)
@@ -60,8 +55,7 @@ export default function CarrierDashboard() {
         : [];
 
       setMyBookings(data);
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast.error('Failed to load your bookings');
       setMyBookings([]);
     } finally {
@@ -76,17 +70,25 @@ export default function CarrierDashboard() {
     }
   }, [activeTab, user]);
 
-  // ================= ACCEPT BOOKING =================
+  // ================= ✅ FIXED ACCEPT BOOKING =================
   const handleAccept = async (shipmentId) => {
     try {
-      await createBooking({
+      const res = await createBooking({
         shipment_id: shipmentId,
         carrier_id: user.id
       });
+
+      const bookingId = res.data.data.id;
+
+      // 🔥 Accept booking immediately
+      await acceptBooking(bookingId);
+
       toast.success('Booking accepted!');
       fetchAvailable();
+      fetchMyBookings();
+
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Could not accept booking');
+      toast.error(err.response?.data?.message || 'Error accepting booking');
     }
   };
 
@@ -120,18 +122,11 @@ export default function CarrierDashboard() {
           });
 
           toast.success('Tracking updated successfully!');
-
           setTrackingModal(null);
-          setTrackingForm({
-            status: '',
-            location: '',
-            notes: ''
-          });
+          setTrackingForm({ status: '', location: '', notes: '' });
 
         } catch (err) {
-          toast.error(
-            err.response?.data?.message || 'Failed to update tracking'
-          );
+          toast.error(err.response?.data?.message || 'Failed to update tracking');
         } finally {
           setSubmitting(false);
         }
@@ -148,114 +143,66 @@ export default function CarrierDashboard() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-5xl mx-auto">
 
-        {/* HEADER */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">
-            Carrier Dashboard
-          </h1>
-          <p className="text-gray-500 text-sm">
-            Welcome, {user?.username}
-          </p>
-        </div>
+        <h1 className="text-2xl font-bold mb-4">Carrier Dashboard</h1>
 
-        {/* TABS */}
+        {/* Tabs */}
         <div className="flex gap-4 mb-6 border-b">
-          <button
-            onClick={() => setActiveTab('available')}
-            className={`pb-2 ${
-              activeTab === 'available'
-                ? 'border-blue-600 text-blue-600'
-                : 'text-gray-500'
-            }`}
-          >
+          <button onClick={() => setActiveTab('available')}>
             Available Shipments
           </button>
-
-          <button
-            onClick={() => setActiveTab('mybookings')}
-            className={`pb-2 ${
-              activeTab === 'mybookings'
-                ? 'border-blue-600 text-blue-600'
-                : 'text-gray-500'
-            }`}
-          >
+          <button onClick={() => setActiveTab('mybookings')}>
             My Bookings
           </button>
         </div>
 
-        {/* ================= AVAILABLE SHIPMENTS ================= */}
-        {activeTab === 'available' && (
-          fetching ? (
-            <p>Loading shipments...</p>
-          ) : availableShipments.length === 0 ? (
-            <p className="text-gray-500">No available shipments</p>
-          ) : (
-            availableShipments.map((s) => {
-              console.log("Shipment object:", s);
+        {/* ================= AVAILABLE ================= */}
+        {activeTab === 'available' &&
+          availableShipments.map((s) => (
+            <div key={s.id} className="bg-white p-4 mb-4 rounded shadow">
+              <h2>{s.pickup_location} → {s.delivery_location}</h2>
+              <p>Weight: {s.weight} kg</p>
 
-              return (
-                <div key={s.id} className="bg-white p-5 mb-4 rounded shadow">
+              <button
+                onClick={() => handleAccept(s.id)}
+                className="bg-blue-600 text-white px-4 py-2 mt-2 rounded"
+              >
+                Accept Shipment
+              </button>
+            </div>
+          ))}
 
-                  <h2 className="text-lg font-semibold mb-2">
-                    {s.pickup_location} → {s.delivery_location}
-                  </h2>
-
-                  <p className="text-gray-600">Weight: {s.weight} kg</p>
-                  <p className="text-gray-600">Quantity: {s.quantity}</p>
-                  <p className="text-gray-600">Freight Type: {s.freight_type}</p>
-
-                  <button
-                    onClick={() => handleAccept(s.id)}
-                    className="bg-blue-600 text-white px-4 py-2 mt-3 rounded"
-                  >
-                    Accept Shipment
-                  </button>
-
-                </div>
-              );
-            })
-          )
-        )}
-
-        {/* ================= MY BOOKINGS ================= */}
+        {/* ================= BOOKINGS ================= */}
         {activeTab === 'mybookings' &&
-          (fetching ? (
-            <p>Loading bookings...</p>
-          ) : myBookings.length === 0 ? (
-            <p className="text-gray-500">No bookings yet</p>
-          ) : (
-            myBookings.map((b) => (
-              <div key={b.id} className="bg-white p-4 mb-4 rounded shadow">
-                <p>Shipment ID: {b.shipment_id}</p>
+          myBookings.map((b) => (
+            <div key={b.id} className="bg-white p-4 mb-4 rounded shadow">
 
+              <p>Shipment ID: {b.shipment_id}</p>
+
+              {/* ✅ SHOW STATUS */}
+              <p>Status: {b.booking_status}</p>
+
+              {/* ✅ SHOW BUTTON ONLY IF ACCEPTED */}
+              {b.booking_status === 'accepted' && (
                 <button
                   onClick={() => setTrackingModal(b.shipment_id)}
                   className="bg-green-600 text-white px-4 py-2 mt-2 rounded"
                 >
                   📍 Update Tracking
                 </button>
-              </div>
-            ))
+              )}
+
+            </div>
           ))}
 
-        {/* ================= TRACKING MODAL ================= */}
+        {/* ================= MODAL ================= */}
         {trackingModal && (
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
             <div className="bg-white p-6 rounded w-96">
-
-              <h2 className="text-lg font-bold mb-4">
-                Update Tracking
-              </h2>
-
               <select
                 value={trackingForm.status}
                 onChange={(e) =>
-                  setTrackingForm({
-                    ...trackingForm,
-                    status: e.target.value
-                  })
+                  setTrackingForm({ ...trackingForm, status: e.target.value })
                 }
-                className="w-full mb-3 border p-2"
               >
                 <option value="">Select Status</option>
                 <option value="picked_up">Picked Up</option>
@@ -263,42 +210,12 @@ export default function CarrierDashboard() {
                 <option value="delivered">Delivered</option>
               </select>
 
-              <input
-                placeholder="Location (optional)"
-                value={trackingForm.location}
-                onChange={(e) =>
-                  setTrackingForm({
-                    ...trackingForm,
-                    location: e.target.value
-                  })
-                }
-                className="w-full mb-3 border p-2"
-              />
-
-              <textarea
-                placeholder="Notes"
-                value={trackingForm.notes}
-                onChange={(e) =>
-                  setTrackingForm({
-                    ...trackingForm,
-                    notes: e.target.value
-                  })
-                }
-                className="w-full mb-3 border p-2"
-              />
-
-              <button
-                onClick={handleTrackingSubmit}
-                disabled={submitting}
-                className="bg-blue-600 text-white px-4 py-2 w-full"
-              >
-                {submitting ? 'Submitting...' : 'Submit'}
+              <button onClick={handleTrackingSubmit}>
+                Submit
               </button>
-
             </div>
           </div>
         )}
-
       </div>
     </div>
   );
