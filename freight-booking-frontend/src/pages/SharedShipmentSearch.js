@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { toast } from 'react-toastify';
 import api from '../services/api';
-import { BsSearch, BsTruck, BsGeoAltFill, BsFillInboxFill, BsBoxSeam, BsSignpostSplitFill, BsCheckCircleFill, BsCalendarEventFill } from 'react-icons/bs';
+import { BsSearch, BsTruck, BsGeoAltFill, BsFillInboxFill, BsBoxSeam, BsSignpostSplitFill, BsCheckCircleFill, BsCalendarEventFill, BsCurrencyRupee } from 'react-icons/bs';
 
 export default function SharedShipmentSearch() {
   const [searchParams, setSearchParams] = useState({
@@ -33,13 +33,14 @@ export default function SharedShipmentSearch() {
 
     setBookingLoading(route.route_id);
     try {
+      const priceQuote = parseFloat(route.price_per_kg) * parseFloat(searchParams.weight);
       await api.post('/vehicles/shared-booking', {
         route_id: route.route_id,
         pickup_location: searchParams.pickup,
         delivery_location: searchParams.destination,
         weight: searchParams.weight,
         freight_type: 'Shared Cargo',
-        price_quote: 0 // In a real app, calculate dynamic price
+        price_quote: priceQuote
       });
       toast.success('Shared booking request sent to carrier!');
       // Remove from results or update UI
@@ -169,9 +170,17 @@ export default function SharedShipmentSearch() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 text-xs font-bold text-gray-500">
-                    <BsCalendarEventFill className="text-gray-400" />
-                    ETA: {r.estimated_arrival ? new Date(r.estimated_arrival).toLocaleString() : 'N/A'}
+                  <div className="flex items-center gap-4 mt-1 mb-3">
+                    <div className="flex items-center gap-2 text-xs font-bold text-gray-500">
+                      <BsCalendarEventFill className="text-gray-400" />
+                      ETA: {r.estimated_arrival ? new Date(r.estimated_arrival).toLocaleString() : 'N/A'}
+                    </div>
+                    {r.price_per_kg > 0 && (
+                      <div className="flex items-center gap-2 text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded">
+                        <BsCurrencyRupee />
+                        Est. Total: ₹{(parseFloat(r.price_per_kg) * (parseFloat(searchParams.weight) || 0)).toFixed(2)}
+                      </div>
+                    )}
                   </div>
 
                   <button

@@ -48,6 +48,7 @@ const sharedBookingController = {
           destination: r.destination,
           intermediate_points: r.intermediate_points,
           estimated_arrival: r.estimated_arrival,
+          price_per_kg: r.price_per_kg,
           remaining_capacity: (r.assigned_vehicle.total_weight_capacity || 999999) - (r.assigned_vehicle.used_weight_capacity || 0)
         }))
       });

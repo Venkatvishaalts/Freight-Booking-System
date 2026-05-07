@@ -39,6 +39,10 @@ const Route = sequelize.define('Route', {
   is_active: {
     type: DataTypes.BOOLEAN,
     defaultValue: true,
+  },
+  price_per_kg: {
+    type: DataTypes.DECIMAL(10, 2),
+    defaultValue: 0,
   }
 }, {
   tableName: 'routes',

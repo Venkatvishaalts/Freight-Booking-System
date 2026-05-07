@@ -24,7 +24,8 @@ export default function CarrierDashboard() {
     source: '',
     destination: '',
     intermediate_points: '',
-    estimated_arrival: ''
+    estimated_arrival: '',
+    price_per_kg: ''
   });
 
   const [trackingModal, setTrackingModal] = useState(null);
@@ -404,7 +405,8 @@ export default function CarrierDashboard() {
                             source: b.shipment.pickup_location,
                             destination: b.shipment.delivery_location,
                             intermediate_points: '',
-                            estimated_arrival: ''
+                            estimated_arrival: '',
+                            price_per_kg: ''
                           });
                         }}
                         className="flex-1 md:flex-none bg-blue-50 text-blue-600 px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-100 transition flex items-center justify-center gap-2"
@@ -527,6 +529,22 @@ export default function CarrierDashboard() {
                       onChange={e => setRouteForm({...routeForm, estimated_arrival: e.target.value})}
                       className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Price per KG (₹)</label>
+                    <div className="relative">
+                      <BsCurrencyRupee className="absolute left-3 top-3 text-gray-400" />
+                      <input
+                        type="number"
+                        step="0.01"
+                        required
+                        placeholder="e.g. 15.50"
+                        value={routeForm.price_per_kg}
+                        onChange={e => setRouteForm({...routeForm, price_per_kg: e.target.value})}
+                        className="w-full border pl-10 pr-4 py-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
                   </div>
                 </div>
 
