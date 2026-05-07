@@ -7,7 +7,7 @@ import { addTrackingUpdate } from '../services/trackingService';
 import { getMyFleet, publishRoute } from '../services/vehicleService';
 import { assignVehicle, completeBooking, acceptBooking } from '../services/bookingService';
 import { Link } from 'react-router-dom';
-import { BsTruck, BsBoxSeam, BsClockHistory, BsCheckCircleFill, BsShareFill, BsGeoAltFill, BsX } from 'react-icons/bs';
+import { BsTruck, BsBoxSeam, BsClockHistory, BsCheckCircleFill, BsShareFill, BsGeoAltFill, BsX, BsCurrencyRupee } from 'react-icons/bs';
 
 export default function CarrierDashboard() {
   const { user } = useSelector((state) => state.auth);
@@ -35,6 +35,8 @@ export default function CarrierDashboard() {
   });
 
   const [submitting, setSubmitting] = useState(false);
+  const [approveModal, setApproveModal] = useState(null);
+  const [priceInput, setPriceInput] = useState('');
 
   // ================= FETCH DATA =================
   const fetchAvailable = async () => {
