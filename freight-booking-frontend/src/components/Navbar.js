@@ -3,6 +3,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import { logoutSuccess } from '../redux/slices/authSlice';
 import { toast } from 'react-toastify';
 
+import { BsTruck } from 'react-icons/bs';
+
 export default function Navbar() {
   const { isAuthenticated, user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
@@ -25,8 +27,8 @@ export default function Navbar() {
   return (
     <nav className="bg-blue-700 text-white px-6 py-3 flex justify-between items-center shadow-md">
       {/* Logo */}
-      <Link to="/" className="text-xl font-bold tracking-wide">
-        🚚 Metavoris FleetLink
+      <Link to="/" className="text-xl font-bold tracking-wide flex items-center">
+        <BsTruck className="mr-2" /> Metavoris FleetLink
       </Link>
 
       {/* Right side */}

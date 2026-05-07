@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { toast } from 'react-toastify';
 import api from '../services/api';
-import { FaSearch, FaTruck, FaMapMarkerAlt, FaWeightHanging, FaBoxOpen, FaRoute, FaCheckCircle, FaCalendarAlt } from 'react-icons/fa';
+import { BsSearch, BsTruck, BsGeoAltFill, BsFillInboxFill, BsBoxSeam, BsSignpostSplitFill, BsCheckCircleFill, BsCalendarEventFill } from 'react-icons/bs';
 
 export default function SharedShipmentSearch() {
   const [searchParams, setSearchParams] = useState({
@@ -67,7 +67,7 @@ export default function SharedShipmentSearch() {
             <div className="space-y-2">
               <label className="text-xs font-bold text-gray-400 uppercase ml-1">Pickup City</label>
               <div className="relative">
-                <FaMapMarkerAlt className="absolute left-4 top-4 text-blue-500" />
+                <BsGeoAltFill className="absolute left-4 top-4 text-blue-500" />
                 <input
                   required
                   placeholder="e.g. Pune"
@@ -80,7 +80,7 @@ export default function SharedShipmentSearch() {
             <div className="space-y-2">
               <label className="text-xs font-bold text-gray-400 uppercase ml-1">Destination</label>
               <div className="relative">
-                <FaMapMarkerAlt className="absolute left-4 top-4 text-green-500" />
+                <BsGeoAltFill className="absolute left-4 top-4 text-green-500" />
                 <input
                   required
                   placeholder="e.g. Mumbai"
@@ -93,7 +93,7 @@ export default function SharedShipmentSearch() {
             <div className="space-y-2">
               <label className="text-xs font-bold text-gray-400 uppercase ml-1">Weight (KG)</label>
               <div className="relative">
-                <FaWeightHanging className="absolute left-4 top-4 text-gray-400" />
+                <BsFillInboxFill className="absolute left-4 top-4 text-gray-400" />
                 <input
                   required
                   type="number"
@@ -112,7 +112,7 @@ export default function SharedShipmentSearch() {
               {loading ? (
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
               ) : (
-                <><FaSearch /> Find Vehicles</>
+                <><BsSearch /> Find Vehicles</>
               )}
             </button>
           </form>
@@ -128,7 +128,7 @@ export default function SharedShipmentSearch() {
                 
                 {/* Vehicle Visual */}
                 <div className="bg-blue-50 p-6 rounded-2xl flex flex-col items-center justify-center w-full md:w-32">
-                  <FaTruck className="text-4xl text-blue-600 mb-2 group-hover:scale-110 transition-transform" />
+                  <BsTruck className="text-4xl text-blue-600 mb-2 group-hover:scale-110 transition-transform" />
                   <span className="text-[10px] font-bold text-blue-800 uppercase text-center">{r.vehicle.vehicle_number}</span>
                 </div>
 
@@ -148,7 +148,7 @@ export default function SharedShipmentSearch() {
                   
                   {r.intermediate_points?.length > 0 && (
                     <div className="flex items-center gap-2 text-xs font-semibold text-gray-400 bg-gray-50 px-3 py-1.5 rounded-full w-fit">
-                      <FaRoute className="text-blue-400" />
+                      <BsSignpostSplitFill className="text-blue-400" />
                       Stops: {r.intermediate_points.join(', ')}
                     </div>
                   )}
@@ -170,7 +170,7 @@ export default function SharedShipmentSearch() {
                   </div>
 
                   <div className="flex items-center gap-2 text-xs font-bold text-gray-500">
-                    <FaCalendarAlt className="text-gray-400" />
+                    <BsCalendarEventFill className="text-gray-400" />
                     ETA: {r.estimated_arrival ? new Date(r.estimated_arrival).toLocaleString() : 'N/A'}
                   </div>
 
@@ -182,7 +182,7 @@ export default function SharedShipmentSearch() {
                     {bookingLoading === r.route_id ? (
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                     ) : (
-                      <><FaCheckCircle /> Request Booking</>
+                      <><BsCheckCircleFill /> Request Booking</>
                     )}
                   </button>
                 </div>
@@ -193,7 +193,7 @@ export default function SharedShipmentSearch() {
 
           {!loading && results.length === 0 && searchParams.pickup && (
             <div className="text-center p-20 bg-white rounded-3xl border-2 border-dashed border-gray-200">
-              <FaBoxOpen className="text-6xl text-gray-200 mx-auto mb-4" />
+              <BsBoxSeam className="text-6xl text-gray-200 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-gray-400">No active routes found</h3>
               <p className="text-gray-400 max-w-xs mx-auto mt-2">
                 Try searching for major cities or hubs, or check back later as carriers publish routes.

@@ -7,7 +7,7 @@ import { addTrackingUpdate } from '../services/trackingService';
 import { getMyFleet, publishRoute } from '../services/vehicleService';
 import { assignVehicle, completeBooking, acceptBooking } from '../services/bookingService';
 import { Link } from 'react-router-dom';
-import { FaTruck, FaBox, FaHistory, FaCheckCircle, FaShareAlt, FaMapMarkerAlt, FaTimes } from 'react-icons/fa';
+import { BsTruck, BsBoxSeam, BsClockHistory, BsCheckCircleFill, BsShareFill, BsGeoAltFill, BsX } from 'react-icons/bs';
 
 export default function CarrierDashboard() {
   const { user } = useSelector((state) => state.auth);
@@ -234,7 +234,7 @@ export default function CarrierDashboard() {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-              <FaTruck className="text-blue-600" /> Carrier Dashboard
+              <BsTruck className="text-blue-600" /> Carrier Dashboard
             </h1>
             <p className="text-gray-500 text-sm">
               Welcome back, {user?.username}
@@ -244,7 +244,7 @@ export default function CarrierDashboard() {
             to="/fleet"
             className="bg-white border border-blue-600 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50 transition flex items-center gap-2 shadow-sm"
           >
-            <FaTruck /> Manage Fleet
+            <BsTruck /> Manage Fleet
           </Link>
         </div>
 
@@ -322,7 +322,7 @@ export default function CarrierDashboard() {
                       {b.shipment?.pickup_location} → {b.shipment?.delivery_location}
                     </h3>
                     <p className="text-sm text-gray-500 flex items-center gap-1">
-                      <FaBox className="text-xs" /> {b.shipment?.freight_type} • {b.shipment?.weight}kg
+                      <BsBoxSeam className="text-xs" /> {b.shipment?.freight_type} • {b.shipment?.weight}kg
                     </p>
                   </div>
                   <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
@@ -340,7 +340,7 @@ export default function CarrierDashboard() {
                     <p className="text-xs font-bold text-gray-400 uppercase mb-2">Assigned Vehicle</p>
                     {b.shipment?.vehicle_id ? (
                       <div className="flex items-center gap-2 text-gray-700 font-medium">
-                        <FaTruck className="text-blue-500" />
+                        <BsTruck className="text-blue-500" />
                         {b.shipment.assigned_vehicle?.vehicle_number || 'Vehicle Assigned'}
                       </div>
                     ) : (
@@ -373,7 +373,7 @@ export default function CarrierDashboard() {
                         onClick={() => handleApproveSharedBooking(b.id)}
                         className="flex-1 md:flex-none bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 transition flex items-center justify-center gap-2"
                       >
-                        <FaCheckCircle /> Approve Shared Booking
+                        <BsCheckCircleFill /> Approve Shared Booking
                       </button>
                     )}
 
@@ -383,13 +383,13 @@ export default function CarrierDashboard() {
                           onClick={() => setTrackingModal(b.shipment_id)}
                           className="flex-1 md:flex-none border border-blue-600 text-blue-600 px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-50 transition flex items-center justify-center gap-2"
                         >
-                          <FaHistory /> Update
+                          <BsClockHistory /> Update
                         </button>
                         <button
                           onClick={() => handleComplete(b.id)}
                           className="flex-1 md:flex-none bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-green-700 transition flex items-center justify-center gap-2"
                         >
-                          <FaCheckCircle /> Complete
+                          <BsCheckCircleFill /> Complete
                         </button>
                       </>
                     )}
@@ -406,7 +406,7 @@ export default function CarrierDashboard() {
                         }}
                         className="flex-1 md:flex-none bg-blue-50 text-blue-600 px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-100 transition flex items-center justify-center gap-2"
                       >
-                        <FaShareAlt /> Share Capacity
+                        <BsShareFill /> Share Capacity
                       </button>
                     )}
                   </div>

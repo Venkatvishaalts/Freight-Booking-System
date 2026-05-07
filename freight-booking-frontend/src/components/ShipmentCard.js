@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { BsBoxSeam, BsFillInboxFill, BsCalendarDate, BsCurrencyRupee, BsTree, BsArrowRepeat } from 'react-icons/bs';
 
 const statusColors = {
   pending: 'bg-yellow-100 text-yellow-700',
@@ -18,20 +19,20 @@ export default function ShipmentCard({ shipment, onAccept, showAccept, showDelet
           <h3 className="font-bold text-gray-800 text-lg">
             {shipment.pickup_location} → {shipment.delivery_location}
           </h3>
-          <p className="text-sm text-gray-500 mt-1">
-            📦 {shipment.freight_type} &nbsp;|&nbsp;
-            ⚖️ {shipment.weight} kg &nbsp;|&nbsp;
-            🔢 Qty: {shipment.quantity}
+          <p className="text-sm text-gray-500 mt-1 flex items-center gap-3">
+            <span className="flex items-center gap-1"><BsBoxSeam className="text-blue-500" /> {shipment.freight_type}</span>
+            <span className="flex items-center gap-1"><BsFillInboxFill className="text-gray-400" /> {shipment.weight} kg</span>
+            <span className="flex items-center gap-1">🔢 Qty: {shipment.quantity}</span>
           </p>
           <div className="flex gap-2 mt-2">
             {shipment.carbon_footprint_estimate && (
               <span className="text-[10px] bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full flex items-center gap-1 font-bold">
-                🌱 CO2: {shipment.carbon_footprint_estimate} kg
+                <BsTree /> CO2: {shipment.carbon_footprint_estimate} kg
               </span>
             )}
             {shipment.is_circular && (
               <span className="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full flex items-center gap-1 font-bold">
-                ♻️ Circular
+                <BsArrowRepeat /> Circular
               </span>
             )}
           </div>
@@ -40,17 +41,17 @@ export default function ShipmentCard({ shipment, onAccept, showAccept, showDelet
           {shipment.current_status}
         </span>
       </div>
-
+ 
       {/* Dates */}
-      <div className="text-sm text-gray-500 mb-3">
-        <span>📅 Pickup: {shipment.scheduled_pickup_date?.split('T')[0]}</span>
-        <span className="ml-4">🏁 Delivery: {shipment.scheduled_delivery_date?.split('T')[0]}</span>
+      <div className="text-sm text-gray-500 mb-3 flex items-center gap-4">
+        <span className="flex items-center gap-1"><BsCalendarDate className="text-gray-400" /> Pickup: {shipment.scheduled_pickup_date?.split('T')[0]}</span>
+        <span className="flex items-center gap-1">🏁 Delivery: {shipment.scheduled_delivery_date?.split('T')[0]}</span>
       </div>
-
+ 
       {/* Price */}
       {shipment.price_quote && (
-        <p className="text-sm font-semibold text-green-700 mb-3">
-          💰 ₹{shipment.price_quote}
+        <p className="text-sm font-semibold text-green-700 mb-3 flex items-center gap-1">
+          <BsCurrencyRupee /> {shipment.price_quote}
         </p>
       )}
 
