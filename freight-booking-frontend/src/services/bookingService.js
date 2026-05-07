@@ -24,8 +24,8 @@ export const updateBooking = (id, data) => {
 };
 
 // ================= ✅ NEW: ACCEPT BOOKING =================
-export const acceptBooking = (bookingId) => {
-  return api.put(`/bookings/${bookingId}/accept`);
+export const acceptBooking = (bookingId, data) => {
+  return api.put(`/bookings/${bookingId}/accept`, data);
 };
 
 export const assignVehicle = (bookingId, vehicleId) => {
