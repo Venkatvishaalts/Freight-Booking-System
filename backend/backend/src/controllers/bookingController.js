@@ -185,32 +185,27 @@ const bookingController = {
     try {
       const { id } = req.params;
       const { price_quote } = req.body;
+      console.log(`[AcceptBooking] ID: ${id}, Price: ${price_quote}`);
 
       const booking = await Booking.findByPk(id);
 
       if (!booking) {
+        console.error('[AcceptBooking] Booking not found');
         return res.status(404).json({
           success: false,
           message: 'Booking not found'
         });
       }
 
-      if (req.user.id !== booking.carrier_id && req.user.user_type !== 'admin') {
-        return res.status(403).json({
-          success: false,
-          message: 'You do not have permission to update this booking'
-        });
-      }
-
-      if (booking.booking_status !== 'pending') {
-        return res.status(400).json({
-          success: false,
-          message: `Cannot accept a booking with status: ${booking.booking_status}`
-        });
-      }
-
       //  Fetch shipment (needed for tracking and price update)
       const shipment = await Shipment.findByPk(booking.shipment_id);
+      if (!shipment) {
+        console.error('[AcceptBooking] Shipment not found for booking');
+        return res.status(404).json({
+          success: false,
+          message: 'Associated shipment not found'
+        });
+      }
 
       booking.booking_status = 'accepted';
       booking.accepted_at = new Date();
@@ -223,30 +218,36 @@ const bookingController = {
         shipment.current_status = 'confirmed';
       }
       
-      if (price_quote !== undefined) {
-        shipment.price_quote = price_quote;
+      if (price_quote !== undefined && price_quote !== null) {
+        shipment.price_quote = parseFloat(price_quote) || 0;
       }
 
       shipment.carrier_id = req.user.id;
       await shipment.save();
 
       //  Auto-create first tracking event
-      await Tracking.create({
-        shipment_id: booking.shipment_id,
-        status: 'picked_up',
-        location: shipment.pickup_location,
-        latitude: 0,
-        longitude: 0,
-        notes: 'Carrier accepted the booking. Pickup in progress.',
-        timestamp: new Date(),
-      });
+      try {
+        await Tracking.create({
+          shipment_id: booking.shipment_id,
+          status: 'picked_up',
+          location: shipment.pickup_location || 'Carrier Facility',
+          latitude: 0,
+          longitude: 0,
+          notes: 'Carrier accepted the booking. Pickup in progress.',
+          timestamp: new Date(),
+        });
+      } catch (trackErr) {
+        console.error('[AcceptBooking] Tracking creation failed (non-fatal):', trackErr.message);
+      }
 
+      console.log('[AcceptBooking] Success');
       res.json({
         success: true,
         message: 'Booking accepted successfully',
         data: booking
       });
     } catch (error) {
+      console.error('[AcceptBooking] CRITICAL ERROR:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to accept booking',
