@@ -184,6 +184,7 @@ const bookingController = {
   acceptBooking: async (req, res) => {
     try {
       const { id } = req.params;
+      const { price_quote } = req.body;
 
       const booking = await Booking.findByPk(id);
 
@@ -208,19 +209,24 @@ const bookingController = {
         });
       }
 
-      //  Fetch shipment (needed for tracking)
+      //  Fetch shipment (needed for tracking and price update)
       const shipment = await Shipment.findByPk(booking.shipment_id);
 
       booking.booking_status = 'accepted';
       booking.accepted_at = new Date();
       await booking.save();
 
-      //  Update shipment status
+      //  Update shipment status and price
       if (shipment.vehicle_id) {
         shipment.current_status = 'in_transit';
       } else {
         shipment.current_status = 'confirmed';
       }
+      
+      if (price_quote !== undefined) {
+        shipment.price_quote = price_quote;
+      }
+
       shipment.carrier_id = req.user.id;
       await shipment.save();
 

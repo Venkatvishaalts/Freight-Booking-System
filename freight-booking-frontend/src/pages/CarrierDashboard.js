@@ -130,10 +130,11 @@ export default function CarrierDashboard() {
     }
   };
 
-  const handleApproveSharedBooking = async (bookingId) => {
+  const handleApproveSharedBooking = async (bookingId, price) => {
     try {
-      await acceptBooking(bookingId);
+      await acceptBooking(bookingId, { price_quote: price });
       toast.success('Shared booking approved! Shipment is now In Transit.');
+      setApproveModal(null);
       fetchMyBookings();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Approval failed');
@@ -370,7 +371,7 @@ export default function CarrierDashboard() {
                     {/* For Shared Bookings that are Pending */}
                     {b.shipment?.current_status === 'pending' && b.shipment?.vehicle_id && (
                       <button
-                        onClick={() => handleApproveSharedBooking(b.id)}
+                        onClick={() => setApproveModal(b)}
                         className="flex-1 md:flex-none bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 transition flex items-center justify-center gap-2"
                       >
                         <BsCheckCircleFill /> Approve Shared Booking
@@ -543,6 +544,47 @@ export default function CarrierDashboard() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* ================= APPROVE MODAL ================= */}
+        {approveModal && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+            <div className="bg-white p-6 rounded-xl w-96 max-w-full shadow-2xl">
+              <h2 className="text-xl font-bold mb-2">Approve Booking</h2>
+              <p className="text-sm text-gray-500 mb-6">Enter the amount for this shared shipment.</p>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Price Quote (₹)</label>
+                  <div className="relative">
+                    <BsCurrencyRupee className="absolute left-3 top-3 text-gray-400" />
+                    <input
+                      type="number"
+                      placeholder="e.g. 5000"
+                      value={priceInput}
+                      onChange={(e) => setPriceInput(e.target.value)}
+                      className="w-full border pl-10 pr-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-8">
+                <button
+                  onClick={() => setApproveModal(null)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-600 rounded-lg font-bold hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleApproveSharedBooking(approveModal.id, priceInput)}
+                  className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-green-700"
+                >
+                  Confirm & Approve
+                </button>
+              </div>
             </div>
           </div>
         )}
