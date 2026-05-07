@@ -39,6 +39,16 @@ export default function Navbar() {
             >
               Dashboard
             </Link>
+            {user?.user_type === 'shipper' && (
+              <Link to="/shared-search" className="text-sm font-bold bg-blue-800 px-3 py-1.5 rounded-lg hover:bg-blue-900 transition">
+                🚀 Find Shared Cargo
+              </Link>
+            )}
+            {user?.user_type === 'carrier' && (
+              <Link to="/fleet" className="text-sm hover:text-blue-200 transition">
+                My Fleet
+              </Link>
+            )}
             <Link
               to="/profile"
               className="text-sm hover:text-blue-200 transition"

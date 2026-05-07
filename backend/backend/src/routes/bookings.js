@@ -52,4 +52,10 @@ router.put('/:id/complete',
   bookingController.completeBooking
 );
 
+// PUT /api/bookings/:id/assign-vehicle - Assign vehicle to booking
+router.put('/:id/assign-vehicle',
+  authMiddleware,
+  bookingController.assignVehicle
+);
+
 module.exports = router;

@@ -4,6 +4,10 @@ import { toast } from 'react-toastify';
 import { getAllShipments } from '../services/shipmentService';
 import { createBooking, getCarrierBookings } from '../services/bookingService';
 import { addTrackingUpdate } from '../services/trackingService';
+import { getMyFleet, publishRoute } from '../services/vehicleService';
+import { assignVehicle, completeBooking, acceptBooking } from '../services/bookingService';
+import { Link } from 'react-router-dom';
+import { FaTruck, FaBox, FaHistory, FaCheckCircle, FaShareAlt, FaMapMarkerAlt, FaTimes } from 'react-icons/fa';
 
 export default function CarrierDashboard() {
   const { user } = useSelector((state) => state.auth);
@@ -12,6 +16,16 @@ export default function CarrierDashboard() {
   const [myBookings, setMyBookings] = useState([]);
   const [activeTab, setActiveTab] = useState('available');
   const [fetching, setFetching] = useState(true);
+  const [fleet, setFleet] = useState([]);
+  const [selectedVehicles, setSelectedVehicles] = useState({}); // bookingId -> vehicleId
+  
+  const [sharingModal, setSharingModal] = useState(null); // stores booking object
+  const [routeForm, setRouteForm] = useState({
+    source: '',
+    destination: '',
+    intermediate_points: '',
+    estimated_arrival: ''
+  });
 
   const [trackingModal, setTrackingModal] = useState(null);
   const [trackingForm, setTrackingForm] = useState({
@@ -69,12 +83,80 @@ export default function CarrierDashboard() {
     }
   };
 
+  const fetchFleet = async () => {
+    try {
+      const res = await getMyFleet();
+      setFleet(res.data.data || []);
+    } catch (err) {
+      console.error("Fleet fetch error:", err);
+    }
+  };
+
   useEffect(() => {
     if (user && user.id) {
       if (activeTab === 'available') fetchAvailable();
-      else fetchMyBookings();
+      else {
+        fetchMyBookings();
+        fetchFleet();
+      }
     }
   }, [activeTab, user]);
+
+  const handleAssignVehicle = async (bookingId) => {
+    const vehicleId = selectedVehicles[bookingId];
+    if (!vehicleId) {
+      toast.error('Please select a vehicle');
+      return;
+    }
+
+    try {
+      await assignVehicle(bookingId, vehicleId);
+      toast.success('Vehicle assigned and shipment is now In Transit!');
+      fetchMyBookings();
+      fetchFleet();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Assignment failed');
+    }
+  };
+
+  const handleComplete = async (bookingId) => {
+    try {
+      await completeBooking(bookingId);
+      toast.success('Shipment delivered and vehicle released!');
+      fetchMyBookings();
+      fetchFleet();
+    } catch (err) {
+      toast.error('Failed to complete booking');
+    }
+  };
+
+  const handleApproveSharedBooking = async (bookingId) => {
+    try {
+      await acceptBooking(bookingId);
+      toast.success('Shared booking approved! Shipment is now In Transit.');
+      fetchMyBookings();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Approval failed');
+    }
+  };
+
+  const handlePublishRoute = async (e) => {
+    e.preventDefault();
+    try {
+      const vehicleId = sharingModal.shipment.vehicle_id;
+      const intermediate_points = routeForm.intermediate_points.split(',').map(p => p.trim()).filter(p => p);
+      
+      await publishRoute(vehicleId, {
+        ...routeForm,
+        intermediate_points
+      });
+      
+      toast.success('Route published! Users can now book shared space.');
+      setSharingModal(null);
+    } catch (err) {
+      toast.error('Failed to publish route');
+    }
+  };
 
   // ================= ACCEPT BOOKING =================
   const handleAccept = async (shipmentId) => {
@@ -149,13 +231,21 @@ export default function CarrierDashboard() {
       <div className="max-w-5xl mx-auto">
 
         {/* HEADER */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">
-            Carrier Dashboard
-          </h1>
-          <p className="text-gray-500 text-sm">
-            Welcome, {user?.username}
-          </p>
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+              <FaTruck className="text-blue-600" /> Carrier Dashboard
+            </h1>
+            <p className="text-gray-500 text-sm">
+              Welcome back, {user?.username}
+            </p>
+          </div>
+          <Link
+            to="/fleet"
+            className="bg-white border border-blue-600 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50 transition flex items-center gap-2 shadow-sm"
+          >
+            <FaTruck /> Manage Fleet
+          </Link>
         </div>
 
         {/* TABS */}
@@ -225,15 +315,102 @@ export default function CarrierDashboard() {
             <p className="text-gray-500">No bookings yet</p>
           ) : (
             myBookings.map((b) => (
-              <div key={b.id} className="bg-white p-4 mb-4 rounded shadow">
-                <p>Shipment ID: {b.shipment_id}</p>
+              <div key={b.id} className="bg-white p-5 mb-4 rounded-xl shadow-sm border border-gray-100">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="font-bold text-gray-800 text-lg">
+                      {b.shipment?.pickup_location} → {b.shipment?.delivery_location}
+                    </h3>
+                    <p className="text-sm text-gray-500 flex items-center gap-1">
+                      <FaBox className="text-xs" /> {b.shipment?.freight_type} • {b.shipment?.weight}kg
+                    </p>
+                  </div>
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
+                    b.shipment?.current_status === 'delivered' ? 'bg-green-100 text-green-700' :
+                    b.shipment?.current_status === 'in_transit' ? 'bg-blue-100 text-blue-700' :
+                    'bg-yellow-100 text-yellow-700'
+                  }`}>
+                    {b.shipment?.current_status}
+                  </span>
+                </div>
 
-                <button
-                  onClick={() => setTrackingModal(b.shipment_id)}
-                  className="bg-green-600 text-white px-4 py-2 mt-2 rounded"
-                >
-                  📍 Update Tracking
-                </button>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-50">
+                  {/* Vehicle Assignment Area */}
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs font-bold text-gray-400 uppercase mb-2">Assigned Vehicle</p>
+                    {b.shipment?.vehicle_id ? (
+                      <div className="flex items-center gap-2 text-gray-700 font-medium">
+                        <FaTruck className="text-blue-500" />
+                        {b.shipment.assigned_vehicle?.vehicle_number || 'Vehicle Assigned'}
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <select
+                          className="flex-1 text-sm border rounded p-2 bg-white"
+                          value={selectedVehicles[b.id] || ''}
+                          onChange={(e) => setSelectedVehicles({...selectedVehicles, [b.id]: e.target.value})}
+                        >
+                          <option value="">Select available vehicle</option>
+                          {fleet.filter(v => v.status === 'available').map(v => (
+                            <option key={v.id} value={v.id}>{v.vehicle_number} ({v.vehicle_type})</option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => handleAssignVehicle(b.id)}
+                          className="bg-blue-600 text-white px-3 py-1 rounded text-sm font-bold hover:bg-blue-700 transition"
+                        >
+                          Assign
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions Area */}
+                  <div className="flex items-center gap-3 justify-end">
+                    {/* For Shared Bookings that are Pending */}
+                    {b.shipment?.current_status === 'pending' && b.shipment?.vehicle_id && (
+                      <button
+                        onClick={() => handleApproveSharedBooking(b.id)}
+                        className="flex-1 md:flex-none bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 transition flex items-center justify-center gap-2"
+                      >
+                        <FaCheckCircle /> Approve Shared Booking
+                      </button>
+                    )}
+
+                    {(['in_transit', 'confirmed', 'picked_up', 'out_for_delivery'].includes(b.shipment?.current_status)) && (
+                      <>
+                        <button
+                          onClick={() => setTrackingModal(b.shipment_id)}
+                          className="flex-1 md:flex-none border border-blue-600 text-blue-600 px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-50 transition flex items-center justify-center gap-2"
+                        >
+                          <FaHistory /> Update
+                        </button>
+                        <button
+                          onClick={() => handleComplete(b.id)}
+                          className="flex-1 md:flex-none bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-green-700 transition flex items-center justify-center gap-2"
+                        >
+                          <FaCheckCircle /> Complete
+                        </button>
+                      </>
+                    )}
+                    {(['in_transit', 'confirmed', 'picked_up', 'out_for_delivery'].includes(b.shipment?.current_status)) && (
+                      <button
+                        onClick={() => {
+                          setSharingModal(b);
+                          setRouteForm({
+                            source: b.shipment.pickup_location,
+                            destination: b.shipment.delivery_location,
+                            intermediate_points: '',
+                            estimated_arrival: ''
+                          });
+                        }}
+                        className="flex-1 md:flex-none bg-blue-50 text-blue-600 px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-100 transition flex items-center justify-center gap-2"
+                      >
+                        <FaShareAlt /> Share Capacity
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
             ))
           ))}
@@ -295,6 +472,77 @@ export default function CarrierDashboard() {
                 {submitting ? 'Submitting...' : 'Submit'}
               </button>
 
+            </div>
+          </div>
+        )}
+
+        {/* ================= SHARING MODAL ================= */}
+        {sharingModal && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+            <div className="bg-white p-6 rounded-xl w-96 max-w-full shadow-2xl">
+              <h2 className="text-xl font-bold mb-2">Share Capacity</h2>
+              <p className="text-sm text-gray-500 mb-6">Publish this route to allow others to book unused space.</p>
+
+              <form onSubmit={handlePublishRoute}>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Source</label>
+                    <input
+                      required
+                      value={routeForm.source}
+                      onChange={e => setRouteForm({...routeForm, source: e.target.value})}
+                      className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Destination</label>
+                    <input
+                      required
+                      value={routeForm.destination}
+                      onChange={e => setRouteForm({...routeForm, destination: e.target.value})}
+                      className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Stops (Comma Separated)</label>
+                    <input
+                      placeholder="e.g. Surat, Vadodara"
+                      value={routeForm.intermediate_points}
+                      onChange={e => setRouteForm({...routeForm, intermediate_points: e.target.value})}
+                      className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Estimated Arrival</label>
+                    <input
+                      type="datetime-local"
+                      required
+                      value={routeForm.estimated_arrival}
+                      onChange={e => setRouteForm({...routeForm, estimated_arrival: e.target.value})}
+                      className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 mt-8">
+                  <button
+                    type="button"
+                    onClick={() => setSharingModal(null)}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-600 rounded-lg font-bold hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700"
+                  >
+                    Publish Route
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

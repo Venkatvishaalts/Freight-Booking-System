@@ -1,4 +1,5 @@
-const { Booking, Shipment, User, Tracking } = require('../models');
+const { Booking, Shipment, User, Tracking, Vehicle } = require('../models');
+const sequelize = require('../config/database');
 
 const bookingController = {
   // Create booking (Carrier accepts shipment)
@@ -37,7 +38,8 @@ const bookingController = {
         shipment_id,
         carrier_id: req.user.id,
         estimated_delivery,
-        booking_status: 'pending'
+        booking_status: 'accepted',
+        accepted_at: new Date()
       });
 
       shipment.current_status = 'confirmed';
@@ -149,7 +151,10 @@ const bookingController = {
       const { count, rows } = await Booking.findAndCountAll({
         where: { carrier_id: carrierId },
         include: [
-          { association: 'shipment', attributes: ['id', 'pickup_location', 'delivery_location', 'current_status'] }
+          { 
+            association: 'shipment', 
+            include: [{ association: 'assigned_vehicle' }] // To get assigned_vehicle
+          }
         ],
         offset,
         limit: parseInt(limit),
@@ -209,6 +214,15 @@ const bookingController = {
       booking.booking_status = 'accepted';
       booking.accepted_at = new Date();
       await booking.save();
+
+      //  Update shipment status
+      if (shipment.vehicle_id) {
+        shipment.current_status = 'in_transit';
+      } else {
+        shipment.current_status = 'confirmed';
+      }
+      shipment.carrier_id = req.user.id;
+      await shipment.save();
 
       //  Auto-create first tracking event
       await Tracking.create({
@@ -288,9 +302,136 @@ const bookingController = {
 
   // Complete booking
   completeBooking: async (req, res) => {
+    const t = await sequelize.transaction();
     try {
       const { id } = req.params;
-      const { actual_delivery } = req.body;
+      const { actual_delivery } = req.body || {};
+
+      const booking = await Booking.findByPk(id, {
+        include: [{ association: 'shipment' }],
+        transaction: t
+      });
+
+      if (!booking) {
+        await t.rollback();
+        return res.status(404).json({
+          success: false,
+          message: 'Booking not found'
+        });
+      }
+
+      // Edge Case: Booking already completed
+      if (booking.booking_status === 'completed') {
+        await t.rollback();
+        return res.json({
+          success: true,
+          message: 'Booking already completed',
+          vehicleStatus: 'AVAILABLE',
+          data: booking
+        });
+      }
+
+      if (req.user.id !== booking.carrier_id && req.user.user_type !== 'admin') {
+        await t.rollback();
+        return res.status(403).json({
+          success: false,
+          message: 'You do not have permission to complete this booking'
+        });
+      }
+
+      if (booking.booking_status !== 'accepted' && booking.booking_status !== 'in_transit' && booking.booking_status !== 'pending') {
+        await t.rollback();
+        return res.status(400).json({
+          success: false,
+          message: `Cannot complete a booking with status: ${booking.booking_status}`
+        });
+      }
+
+      booking.booking_status = 'completed';
+      booking.actual_delivery = actual_delivery || new Date();
+      await booking.save({ transaction: t });
+
+      if (booking.shipment) {
+        const now = new Date();
+        
+        // Update shipment
+        booking.shipment.current_status = 'delivered';
+        booking.shipment.delivered_at = now;
+        await booking.shipment.save({ transaction: t });
+
+        // Handle vehicle capacity and status
+        if (booking.shipment.vehicle_id) {
+          const vehicle = await Vehicle.findByPk(booking.shipment.vehicle_id, { transaction: t });
+          
+          if (!vehicle) {
+            await t.rollback();
+            return res.status(404).json({
+              success: false,
+              message: 'Assigned vehicle not found'
+            });
+          }
+
+          // Subtract the shipment weight from the vehicle's used capacity
+          const shipmentWeight = parseFloat(booking.shipment.weight) || 0;
+          let newUsedCapacity = (parseFloat(vehicle.used_weight_capacity) || 0) - shipmentWeight;
+          
+          // Prevent negative capacity
+          if (newUsedCapacity < 0) newUsedCapacity = 0;
+          
+          vehicle.used_weight_capacity = newUsedCapacity;
+          
+          // Check for other active shipments on this vehicle
+          const activeCount = await Shipment.count({
+            where: {
+              vehicle_id: booking.shipment.vehicle_id,
+              current_status: ['confirmed', 'picked_up', 'in_transit', 'out_for_delivery']
+            },
+            transaction: t
+          });
+
+          if (activeCount === 0) {
+            vehicle.status = 'available';
+            vehicle.capacity_status = 'available';
+            vehicle.used_weight_capacity = 0;
+            vehicle.current_shipment_id = null;
+          } else {
+            vehicle.capacity_status = 'partial';
+            // Handle floating point precision
+            if (vehicle.used_weight_capacity < 0.1) vehicle.used_weight_capacity = 0;
+          }
+          
+          vehicle.last_delivery_completed_at = now;
+          
+          await vehicle.save({ transaction: t });
+        }
+      }
+
+      await t.commit();
+
+      res.json({
+        success: true,
+        message: 'Delivery completed successfully',
+        vehicleStatus: 'AVAILABLE',
+        data: booking
+      });
+    } catch (error) {
+      if (t && !t.finished) {
+        await t.rollback();
+      }
+      console.error('Error completing booking:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to complete booking',
+        error: error.message
+      });
+    }
+  },
+
+  // Assign vehicle to a booking/shipment
+  assignVehicle: async (req, res) => {
+    try {
+      const { id } = req.params; // Booking ID
+      const { vehicle_id } = req.body;
 
       const booking = await Booking.findByPk(id, {
         include: [{ association: 'shipment' }]
@@ -303,36 +444,97 @@ const bookingController = {
         });
       }
 
-      if (req.user.id !== booking.carrier_id && req.user.user_type !== 'admin') {
+      // Check ownership
+      if (booking.carrier_id !== req.user.id && req.user.user_type !== 'admin') {
         return res.status(403).json({
           success: false,
-          message: 'You do not have permission to complete this booking'
+          message: 'No permission to assign vehicle to this booking'
         });
       }
 
-      if (booking.booking_status !== 'accepted') {
+      // Check vehicle
+      const vehicle = await Vehicle.findByPk(vehicle_id);
+
+      if (!vehicle) {
+        return res.status(404).json({
+          success: false,
+          message: 'Vehicle not found'
+        });
+      }
+
+      if (vehicle.carrier_id !== req.user.id) {
+        return res.status(403).json({
+          success: false,
+          message: 'This vehicle does not belong to your fleet'
+        });
+      }
+
+      // Check capacity if vehicle is already in use
+      if (vehicle.status === 'out_for_delivery' && vehicle.capacity_status === 'full') {
         return res.status(400).json({
           success: false,
-          message: 'Only accepted bookings can be completed'
+          message: 'Vehicle is currently full and cannot accept more shipments'
         });
       }
 
-      booking.booking_status = 'completed';
-      booking.actual_delivery = actual_delivery || new Date();
-      await booking.save();
+      const shipmentWeight = (booking.shipment && booking.shipment.weight) ? parseFloat(booking.shipment.weight) : 0;
+      const currentUsed = parseFloat(vehicle.used_weight_capacity) || 0;
+      const newUsedCapacity = currentUsed + shipmentWeight;
 
-      booking.shipment.current_status = 'delivered';
+      if (vehicle.total_weight_capacity && newUsedCapacity > vehicle.total_weight_capacity) {
+        return res.status(400).json({
+          success: false,
+          message: `Insufficient capacity. Vehicle limit: ${vehicle.total_weight_capacity}kg, currently using: ${currentUsed}kg, required: ${shipmentWeight}kg`
+        });
+      }
+
+      // Update shipment
+      booking.shipment.vehicle_id = vehicle_id;
+      booking.shipment.current_status = 'in_transit';
       await booking.shipment.save();
+
+      // Update booking status
+      if (booking.booking_status === 'pending') {
+        booking.booking_status = 'accepted';
+        booking.accepted_at = new Date();
+        await booking.save();
+      }
+
+      // Update vehicle status and capacity
+      vehicle.status = 'out_for_delivery';
+      vehicle.current_shipment_id = booking.shipment_id;
+      vehicle.used_weight_capacity = newUsedCapacity;
+      
+      // Auto-update capacity status
+      if (vehicle.total_weight_capacity && vehicle.used_weight_capacity >= vehicle.total_weight_capacity) {
+        vehicle.capacity_status = 'full';
+      } else {
+        vehicle.capacity_status = 'partial';
+      }
+
+      await vehicle.save();
+
+      // Create tracking entry
+      await Tracking.create({
+        shipment_id: booking.shipment_id,
+        status: 'in_transit',
+        location: booking.shipment.pickup_location,
+        notes: `Vehicle assigned: ${vehicle.vehicle_number} (${vehicle.vehicle_type}). Out for delivery.`,
+        timestamp: new Date()
+      });
 
       res.json({
         success: true,
-        message: 'Booking completed successfully',
-        data: booking
+        message: 'Vehicle assigned and shipment is now in transit',
+        data: {
+          booking,
+          vehicle
+        }
       });
     } catch (error) {
       res.status(500).json({
         success: false,
-        message: 'Failed to complete booking',
+        message: 'Failed to assign vehicle',
         error: error.message
       });
     }

@@ -23,6 +23,18 @@ export default function ShipmentCard({ shipment, onAccept, showAccept, showDelet
             ⚖️ {shipment.weight} kg &nbsp;|&nbsp;
             🔢 Qty: {shipment.quantity}
           </p>
+          <div className="flex gap-2 mt-2">
+            {shipment.carbon_footprint_estimate && (
+              <span className="text-[10px] bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full flex items-center gap-1 font-bold">
+                🌱 CO2: {shipment.carbon_footprint_estimate} kg
+              </span>
+            )}
+            {shipment.is_circular && (
+              <span className="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full flex items-center gap-1 font-bold">
+                ♻️ Circular
+              </span>
+            )}
+          </div>
         </div>
         <span className={`text-xs px-3 py-1 rounded-full font-medium ${statusColors[shipment.current_status] || 'bg-gray-100 text-gray-600'}`}>
           {shipment.current_status}

@@ -1,5 +1,6 @@
 const { Shipment, User, Booking, Tracking } = require('../models');
 const { Op } = require('sequelize');
+const aiService = require('../services/aiService');
 
 const shipmentController = {
 
@@ -17,8 +18,15 @@ const shipmentController = {
         scheduled_delivery_date,
         price_quote,
         description,
-        special_instructions
+        special_instructions,
+        is_circular,
+        packaging_type,
+        volume_cm3
       } = req.body;
+
+      // Mock distance for carbon footprint calculation (in a real app, this would use a Maps API)
+      const mockDistance = 150; // 150 km
+      const carbonEstimate = aiService.estimateCarbonFootprint(weight, mockDistance, 'truck');
 
       const shipment = await Shipment.create({
         shipper_id: req.user.id,
@@ -33,6 +41,10 @@ const shipmentController = {
         price_quote,
         description,
         special_instructions,
+        is_circular: is_circular || false,
+        packaging_type: packaging_type || 'standard',
+        volume_cm3,
+        carbon_footprint_estimate: carbonEstimate,
         current_status: 'pending'
       });
 
@@ -83,13 +95,18 @@ const shipmentController = {
       const offset = (page - 1) * limit;
 
       const { count, rows } = await Shipment.findAndCountAll({
-        where,
+        where: {
+          ...where,
+          '$bookings.id$': null
+        },
         include: [
+          { association: 'bookings', required: false, attributes: [] },
           { association: 'shipper', attributes: ['id', 'username', 'company_name'] },
           { association: 'carrier', attributes: ['id', 'username', 'company_name'] }
         ],
         offset,
         limit: parseInt(limit),
+        subQuery: false,
         order: [[sort_by, sort_order]]
       });
 
@@ -293,6 +310,101 @@ const shipmentController = {
       res.status(500).json({
         success: false,
         message: 'Failed to cancel shipment',
+        error: error.message
+      });
+    }
+  },
+
+  // ================= COMPLETE SHIPMENT =================
+  completeShipment: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { Vehicle } = require('../models');
+
+      const shipment = await Shipment.findByPk(id);
+
+      if (!shipment) {
+        return res.status(404).json({
+          success: false,
+          message: 'Shipment not found'
+        });
+      }
+
+      // Authorization check (carrier assigned to shipment or admin)
+      if (req.user.id !== shipment.carrier_id && req.user.user_type !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          message: 'No permission to complete this shipment'
+        });
+      }
+
+      const now = new Date();
+
+      // Update shipment
+      shipment.current_status = 'delivered';
+      shipment.delivered_at = now;
+      await shipment.save();
+
+      // Update associated booking if exists
+      const booking = await Booking.findOne({ where: { shipment_id: id } });
+      if (booking) {
+        booking.booking_status = 'completed';
+        booking.actual_delivery = now;
+        await booking.save();
+      }
+
+      // Handle vehicle release
+      if (shipment.vehicle_id) {
+        const vehicle = await Vehicle.findByPk(shipment.vehicle_id);
+        if (vehicle) {
+          // Release capacity
+          const weight = parseFloat(shipment.weight || 0);
+          vehicle.used_weight_capacity = Math.max(0, (parseFloat(vehicle.used_weight_capacity) || 0) - weight);
+          
+          // Check for other active shipments on this vehicle
+          const activeCount = await Shipment.count({
+            where: {
+              vehicle_id: shipment.vehicle_id,
+              current_status: ['confirmed', 'picked_up', 'in_transit', 'out_for_delivery']
+            }
+          });
+
+          if (activeCount === 0) {
+            vehicle.status = 'available';
+            vehicle.capacity_status = 'available';
+            vehicle.used_weight_capacity = 0;
+            vehicle.current_shipment_id = null;
+            vehicle.last_delivery_completed_at = now;
+          } else {
+            vehicle.capacity_status = 'partial';
+            // Ensure used_weight_capacity doesn't drift due to floating point
+            if (vehicle.used_weight_capacity < 0.1) vehicle.used_weight_capacity = 0;
+          }
+          
+          await vehicle.save();
+        }
+      }
+
+      // Create tracking entry
+      await Tracking.create({
+        shipment_id: id,
+        status: 'delivered',
+        location: shipment.delivery_location,
+        notes: 'Shipment successfully delivered. Vehicle released.',
+        timestamp: now
+      });
+
+      res.json({
+        success: true,
+        message: 'Shipment completed successfully',
+        vehicleStatus: 'available',
+        data: shipment
+      });
+
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to complete shipment',
         error: error.message
       });
     }

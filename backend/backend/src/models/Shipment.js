@@ -23,6 +23,14 @@ const Shipment = sequelize.define('Shipment', {
       key: 'id'
     }
   },
+  vehicle_id: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    references: {
+      model: 'vehicles',
+      key: 'id'
+    }
+  },
   pickup_location: {
     type: DataTypes.STRING(200),
     allowNull: false
@@ -76,7 +84,7 @@ const Shipment = sequelize.define('Shipment', {
     allowNull: false
   },
   current_status: {
-    type: DataTypes.ENUM('pending', 'confirmed', 'in_transit', 'delivered', 'cancelled'),
+    type: DataTypes.ENUM('pending', 'confirmed', 'picked_up', 'in_transit', 'out_for_delivery', 'delivered', 'cancelled'),
     allowNull: false,
     defaultValue: 'pending'
   },
@@ -90,6 +98,32 @@ const Shipment = sequelize.define('Shipment', {
   },
   special_instructions: {
     type: DataTypes.TEXT,
+    allowNull: true
+  },
+  packaging_type: {
+    type: DataTypes.ENUM('standard', 'reusable', 'eco_friendly'),
+    defaultValue: 'standard'
+  },
+  is_circular: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    comment: 'True if using reusable packaging or participating in backhauling'
+  },
+  is_shared: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  volume_cm3: {
+    type: DataTypes.FLOAT,
+    allowNull: true,
+  },
+  carbon_footprint_estimate: {
+    type: DataTypes.FLOAT,
+    allowNull: true,
+    comment: 'Estimated CO2 in kg'
+  },
+  delivered_at: {
+    type: DataTypes.DATE,
     allowNull: true
   },
   created_at: {

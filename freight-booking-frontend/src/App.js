@@ -13,6 +13,8 @@ import AdminDashboard from './pages/AdminDashboard';
 import ShipmentDetails from './pages/ShipmentDetails';
 import TrackingPage from './pages/TrackingPage';
 import ProfilePage from './pages/ProfilePage';
+import FleetManagement from './pages/FleetManagement';
+import SharedShipmentSearch from './pages/SharedShipmentSearch';
 
 // PrivateRoute: blocks access if not logged in
 // If role is specified, also blocks wrong user types
@@ -58,6 +60,22 @@ function App() {
           element={
             <PrivateRoute role="carrier">
               <CarrierDashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/fleet"
+          element={
+            <PrivateRoute role="carrier">
+              <FleetManagement />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/shared-search"
+          element={
+            <PrivateRoute role="shipper">
+              <SharedShipmentSearch />
             </PrivateRoute>
           }
         />

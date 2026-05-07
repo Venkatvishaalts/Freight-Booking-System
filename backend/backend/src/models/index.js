@@ -4,6 +4,7 @@ const Booking = require('./Booking');
 const Tracking = require('./Tracking');
 const Review = require('./Review');
 const Vehicle = require('./Vehicle');
+const Route = require('./Route');
 
 // Define associations
 // User relationships
@@ -20,6 +21,7 @@ Shipment.belongsTo(User, { foreignKey: 'carrier_id', as: 'carrier' });
 Shipment.hasMany(Booking, { foreignKey: 'shipment_id', as: 'bookings' });
 Shipment.hasMany(Tracking, { foreignKey: 'shipment_id', as: 'tracking_history' });
 Shipment.hasMany(Review, { foreignKey: 'shipment_id', as: 'reviews' });
+Shipment.belongsTo(Vehicle, { foreignKey: 'vehicle_id', as: 'assigned_vehicle' });
 
 // Booking relationships
 Booking.belongsTo(Shipment, { foreignKey: 'shipment_id', as: 'shipment' });
@@ -35,6 +37,11 @@ Review.belongsTo(User, { foreignKey: 'reviewed_user_id', as: 'reviewed_user' });
 
 // Vehicle relationships
 Vehicle.belongsTo(User, { foreignKey: 'carrier_id', as: 'carrier' });
+Vehicle.hasMany(Shipment, { foreignKey: 'vehicle_id', as: 'shipments' });
+
+// Vehicle - Route relationships
+Vehicle.hasMany(Route, { foreignKey: 'vehicle_id', as: 'routes' });
+Route.belongsTo(Vehicle, { foreignKey: 'vehicle_id', as: 'assigned_vehicle' });
 
 module.exports = {
   User,
@@ -42,5 +49,6 @@ module.exports = {
   Booking,
   Tracking,
   Review,
-  Vehicle
+  Vehicle,
+  Route
 };

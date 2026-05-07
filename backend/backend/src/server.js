@@ -108,6 +108,21 @@ sequelize.authenticate()
 // ============================================================================
 
 // Health check
+app.get('/api', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Welcome to the Freight-Booking-System API',
+    version: '1.0.0',
+    endpoints: {
+      auth: '/api/auth',
+      shipments: '/api/shipments',
+      bookings: '/api/bookings',
+      tracking: '/api/tracking',
+      vehicles: '/api/vehicles'
+    }
+  });
+});
+
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'Server is running',
@@ -123,6 +138,7 @@ const bookingRoutes = require('./routes/bookings');
 const trackingRoutes = require('./routes/tracking');
 const userRoutes = require('./routes/users');
 const reviewRoutes = require('./routes/reviews');
+const vehicleRoutes = require('./routes/vehicles');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/shipments', shipmentRoutes);
@@ -130,6 +146,7 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/tracking', trackingRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/vehicles', vehicleRoutes);
 
 // ============================================================================
 // ERROR HANDLING
@@ -159,14 +176,27 @@ app.use((err, req, res, next) => {
 });
 
 // ============================================================================
-// START SERVER (IMPORTANT CHANGE HERE)
+// START SERVER
 // ============================================================================
 
 const PORT = process.env.PORT || 5000;
 
-server.listen(PORT, () => { // CHANGED (app → server)
-  console.log(` Server running on http://localhost:${PORT}`);
-  console.log(` API Base URL: http://localhost:${PORT}/api`);
-});
+const startServer = async () => {
+  try {
+    // Sync database (Disabled to prevent schema drift issues - schema is already managed manually)
+    // await sequelize.sync();
+    console.log(' Database connected and ready');
+
+    server.listen(PORT, () => {
+      console.log(` Server running on http://localhost:${PORT}`);
+      console.log(` API Base URL: http://localhost:${PORT}/api`);
+    });
+  } catch (error) {
+    console.error(' Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+startServer();
 
 module.exports = app;

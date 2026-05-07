@@ -27,3 +27,11 @@ export const updateBooking = (id, data) => {
 export const acceptBooking = (bookingId) => {
   return api.put(`/bookings/${bookingId}/accept`);
 };
+
+export const assignVehicle = (bookingId, vehicleId) => {
+  return api.put(`/bookings/${bookingId}/assign-vehicle`, { vehicle_id: vehicleId });
+};
+
+export const completeBooking = (bookingId) => {
+  return api.put(`/bookings/${bookingId}/complete`);
+};

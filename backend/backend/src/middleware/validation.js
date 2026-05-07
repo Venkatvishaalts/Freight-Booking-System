@@ -80,7 +80,23 @@ const validators = {
       .withMessage('Invalid delivery date format'),
     body('price_quote')
       .isFloat({ min: 0 })
-      .withMessage('Price must be a positive number')
+      .withMessage('Price must be a positive number'),
+    body('is_circular')
+      .optional()
+      .isBoolean()
+      .withMessage('is_circular must be a boolean'),
+    body('packaging_type')
+      .optional()
+      .isIn(['standard', 'reusable', 'eco_friendly'])
+      .withMessage('Invalid packaging type'),
+    body('volume_cm3')
+      .optional()
+      .isFloat({ min: 0 })
+      .withMessage('Volume must be a positive number'),
+    body('is_shared')
+      .optional()
+      .isBoolean()
+      .withMessage('is_shared must be a boolean')
   ],
 
   // Booking validators
@@ -132,6 +148,36 @@ const validators = {
       .trim()
       .isLength({ max: 1000 })
       .withMessage('Comment must be less than 1000 characters')
+  ],
+
+  // Vehicle validators
+  createVehicle: [
+    body('vehicle_number')
+      .trim()
+      .notEmpty()
+      .withMessage('Vehicle number is required')
+      .isLength({ max: 20 })
+      .withMessage('Vehicle number too long'),
+    body('vehicle_type')
+      .isIn(['bike', 'van', 'truck', 'mini_truck', 'container_truck'])
+      .withMessage('Invalid vehicle type'),
+    body('capacity_kg')
+      .optional({ checkFalsy: true })
+      .isFloat({ min: 1 })
+      .withMessage('Capacity must be at least 1kg'),
+    body('driver_name')
+      .optional({ checkFalsy: true })
+      .trim()
+      .isLength({ min: 2, max: 100 })
+      .withMessage('Driver name must be between 2 and 100 characters'),
+    body('driver_phone')
+      .optional({ checkFalsy: true })
+      .matches(/^[0-9]{10,15}$/)
+      .withMessage('Invalid driver phone number'),
+    body('total_weight_capacity')
+      .optional({ checkFalsy: true })
+      .isFloat({ min: 1 })
+      .withMessage('Total weight capacity must be at least 1kg')
   ]
 };
 

@@ -46,6 +46,15 @@ const User = sequelize.define('User', {
     type: DataTypes.BOOLEAN,
     defaultValue: true
   },
+  sustainability_rating: {
+    type: DataTypes.FLOAT,
+    defaultValue: 5.0,
+    comment: 'Rating for circular practices and eco-friendly operations'
+  },
+  is_eco_certified: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
   created_at: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW

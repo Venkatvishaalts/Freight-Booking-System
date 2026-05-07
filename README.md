@@ -1,5 +1,5 @@
-# Freight-Booking-System
-Digital Freight Booking Platfrom
+# Freight-Booking-System: AI-Driven Circular Logistics
+Digital Freight Booking Platform focused on AI optimization and Circular Economy sustainability.
 
 Features:
 For Shippers:

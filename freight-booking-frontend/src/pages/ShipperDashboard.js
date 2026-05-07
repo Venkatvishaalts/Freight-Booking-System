@@ -13,6 +13,11 @@ const emptyForm = {
   scheduled_pickup_date: '',
   scheduled_delivery_date: '',
   price_quote: '',
+  description: '',
+  special_instructions: '',
+  packaging_type: 'standard',
+  is_circular: false,
+  volume_cm3: ''
 };
 
 export default function ShipperDashboard() {
@@ -153,6 +158,18 @@ export default function ShipperDashboard() {
               </div>
 
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Volume (cm³)</label>
+                <input
+                  type="number"
+                  name="volume_cm3"
+                  value={form.volume_cm3}
+                  onChange={handleChange}
+                  placeholder="e.g. 5000"
+                  className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Weight (kg)</label>
                 <input
                   data-cy="weight"
@@ -217,6 +234,33 @@ export default function ShipperDashboard() {
                   required
                   className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
+              </div>
+
+              <div className="md:col-span-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Packaging Type</label>
+                <select
+                  name="packaging_type"
+                  value={form.packaging_type}
+                  onChange={handleChange}
+                  className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                >
+                  <option value="standard">Standard</option>
+                  <option value="reusable">Reusable</option>
+                  <option value="eco_friendly">Eco-Friendly</option>
+                </select>
+              </div>
+
+              <div className="md:col-span-1 flex items-center pt-6">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="is_circular"
+                    checked={form.is_circular}
+                    onChange={(e) => setForm({ ...form, is_circular: e.target.checked })}
+                    className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <span className="text-sm font-medium text-gray-700">Circular Logistics (Backhauling)</span>
+                </label>
               </div>
 
               <div className="md:col-span-2">

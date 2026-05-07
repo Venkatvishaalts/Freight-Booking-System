@@ -42,4 +42,10 @@ router.put('/:id/cancel',
   shipmentController.cancelShipment
 );
 
+// PATCH /api/shipments/:id/complete - Complete delivery
+router.patch('/:id/complete',
+  authMiddleware,
+  shipmentController.completeShipment
+);
+
 module.exports = router;

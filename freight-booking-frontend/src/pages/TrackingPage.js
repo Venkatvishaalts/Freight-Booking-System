@@ -137,15 +137,18 @@ export default function TrackingPage() {
   }
 
   // ── Derive map data ───────────────────────────────────────────────────────
-  // Backend returns DESC order → index 0 is the latest update
-  const latest    = trackingData[0];
-  const latestLat = parseFloat(latest.latitude);
-  const latestLng = parseFloat(latest.longitude);
-
-  // Build polyline path: reverse to ASC so the line goes oldest → newest
+  const latest = trackingData[0];
+  
+  // Filter and parse positions safely
   const positions = [...trackingData]
     .reverse()
-    .map((t) => [parseFloat(t.latitude), parseFloat(t.longitude)]);
+    .map((t) => [parseFloat(t.latitude), parseFloat(t.longitude)])
+    .filter((pos) => !isNaN(pos[0]) && !isNaN(pos[1]));
+
+  // Get the latest valid position for the map center/marker
+  const latestValid = [...positions].reverse()[0];
+  const latestLat = latestValid ? latestValid[0] : null;
+  const latestLng = latestValid ? latestValid[1] : null;
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -179,38 +182,44 @@ export default function TrackingPage() {
 
         {/* ── Map ── */}
         <div className="rounded-xl overflow-hidden shadow mb-6" style={{ height: 400 }}>
-          <MapContainer
-            center={[latestLat, latestLng]}
-            zoom={10}
-            style={{ height: '100%', width: '100%' }}
-          >
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-
-            {/* ── Auto-pan map when latest coordinates change ── */}
-            <MapUpdater lat={latestLat} lng={latestLng} />
-
-            {/* ── Route polyline (oldest → newest) ── */}
-            {positions.length > 1 && (
-              <Polyline positions={positions} color="#2563eb" weight={3} opacity={0.7} />
-            )}
-
-            {/* ── Latest location marker ── */}
-            <Marker position={[latestLat, latestLng]}>
-              <Popup>
-                <div style={{ minWidth: 160 }}>
-                  <strong>{statusLabels[latest.status] || latest.status}</strong>
-                  <br />
-                  📍 {latest.location}
-                  <br />
-                  🕐 {new Date(latest.timestamp).toLocaleString('en-IN')}
-                  {latest.notes && <><br />📝 {latest.notes}</>}
-                </div>
-              </Popup>
-            </Marker>
-          </MapContainer>
+          {latestLat !== null && latestLng !== null ? (
+            <MapContainer
+              center={[latestLat, latestLng]}
+              zoom={10}
+              style={{ height: '100%', width: '100%' }}
+            >
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+  
+              {/* ── Auto-pan map when latest coordinates change ── */}
+              <MapUpdater lat={latestLat} lng={latestLng} />
+  
+              {/* ── Route polyline (oldest → newest) ── */}
+              {positions.length > 1 && (
+                <Polyline positions={positions} color="#2563eb" weight={3} opacity={0.7} />
+              )}
+  
+              {/* ── Latest location marker ── */}
+              <Marker position={[latestLat, latestLng]}>
+                <Popup>
+                  <div style={{ minWidth: 160 }}>
+                    <strong>{statusLabels[latest.status] || latest.status}</strong>
+                    <br />
+                    📍 {latest.location}
+                    <br />
+                    🕐 {new Date(latest.timestamp).toLocaleString('en-IN')}
+                    {latest.notes && <><br />📝 {latest.notes}</>}
+                  </div>
+                </Popup>
+              </Marker>
+            </MapContainer>
+          ) : (
+            <div className="h-full w-full bg-gray-100 flex items-center justify-center text-gray-400">
+              <p>📍 Location data not available on map</p>
+            </div>
+          )}
         </div>
 
         {/* ── Tracking History Timeline ── */}
