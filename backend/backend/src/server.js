@@ -111,7 +111,7 @@ sequelize.authenticate()
 app.get('/api', (req, res) => {
   res.json({
     success: true,
-    message: 'Welcome to the Freight-Booking-System API',
+    message: 'Welcome to the Metavoris FleetLink API',
     version: '1.0.0',
     endpoints: {
       auth: '/api/auth',

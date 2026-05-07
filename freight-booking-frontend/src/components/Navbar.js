@@ -26,7 +26,7 @@ export default function Navbar() {
     <nav className="bg-blue-700 text-white px-6 py-3 flex justify-between items-center shadow-md">
       {/* Logo */}
       <Link to="/" className="text-xl font-bold tracking-wide">
-        🚛 FreightBook
+        🚚 Metavoris FleetLink
       </Link>
 
       {/* Right side */}
