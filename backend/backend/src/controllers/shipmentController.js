@@ -134,9 +134,9 @@ const shipmentController = {
   getShipperShipments: async (req, res) => {
     try {
       const { shipperId } = req.params;
-
+      const actualShipperId = shipperId === 'me' ? req.user.id : shipperId;
       const shipments = await Shipment.findAll({
-        where: { shipper_id: shipperId },
+        where: { shipper_id: actualShipperId },
         include: [
           { association: 'carrier', attributes: ['id', 'username', 'company_name'] }
         ],
@@ -152,6 +152,34 @@ const shipmentController = {
       res.status(500).json({
         success: false,
         message: 'Failed to fetch shipper shipments',
+        error: error.message
+      });
+    }
+  },
+
+  // =================  NEW: GET CARRIER SHIPMENTS =================
+  getCarrierShipments: async (req, res) => {
+    try {
+      const { carrierId } = req.params;
+      const actualCarrierId = carrierId === 'me' ? req.user.id : carrierId;
+
+      const shipments = await Shipment.findAll({
+        where: { carrier_id: actualCarrierId },
+        include: [
+          { association: 'shipper', attributes: ['id', 'username', 'company_name'] }
+        ],
+        order: [['created_at', 'DESC']]
+      });
+
+      res.json({
+        success: true,
+        data: shipments
+      });
+
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch carrier shipments',
         error: error.message
       });
     }

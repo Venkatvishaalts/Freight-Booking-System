@@ -135,12 +135,11 @@ export default function ProfilePage() {
 
     const fetchShipments = async () => {
       try {
-        // GET /shipments/shipper/me — backend reads shipper id from JWT token
-        const res = await api.get("/shipments/shipper/me?limit=10");
-        setRecentShipments(res.data.shipments || res.data);
+        const endpoint = authUser?.user_type === "carrier" ? "carrier" : "shipper";
+        const res = await api.get(`/shipments/${endpoint}/me?limit=10`);
+        setRecentShipments(res.data.shipments || res.data.data || res.data);
       } catch (err) {
         console.error("Failed to load shipments:", err.response?.status, err.response?.data);
-        // non-fatal — page still works without shipments
       }
     };
 

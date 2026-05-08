@@ -17,7 +17,18 @@ const userController = {
         });
       }
 
-      res.json(user);
+      const { Shipment } = require('../models');
+      const stats = {
+        total_shipments: await Shipment.count({ where: { [user.user_type === 'shipper' ? 'shipper_id' : 'carrier_id']: userId } }),
+        completed: await Shipment.count({ where: { [user.user_type === 'shipper' ? 'shipper_id' : 'carrier_id']: userId, current_status: 'delivered' } }),
+        pending: await Shipment.count({ where: { [user.user_type === 'shipper' ? 'shipper_id' : 'carrier_id']: userId, current_status: 'pending' } }),
+        cancelled: await Shipment.count({ where: { [user.user_type === 'shipper' ? 'shipper_id' : 'carrier_id']: userId, current_status: 'cancelled' } })
+      };
+
+      res.json({
+        ...user.toJSON(),
+        ...stats
+      });
     } catch (error) {
       res.status(500).json({
         success: false,
@@ -34,7 +45,7 @@ const userController = {
       const { username, email, phone, company_name, profile_image } = req.body;
 
       // Check authorization - user can only update their own profile
-      if (req.user.id !== parseInt(userId) && req.user.user_type !== 'admin') {
+      if (req.user.id !== userId && req.user.user_type !== 'admin') {
         return res.status(403).json({
           success: false,
           message: 'You do not have permission to update this profile'
@@ -141,7 +152,7 @@ const userController = {
       const { vehicle_type, capacity_kg, license_plate, registration_number, manufactured_year } = req.body;
 
       // Check authorization
-      if (req.user.id !== parseInt(userId) && req.user.user_type !== 'admin') {
+      if (req.user.id !== userId && req.user.user_type !== 'admin') {
         return res.status(403).json({
           success: false,
           message: 'You do not have permission to add vehicles'

@@ -24,6 +24,12 @@ router.get('/shipper/:shipperId',
   shipmentController.getShipperShipments
 );
 
+// GET /api/shipments/carrier/:carrierId - Get carrier's shipments
+router.get('/carrier/:carrierId',
+  authMiddleware,
+  shipmentController.getCarrierShipments
+);
+
 // GET /api/shipments/:id - Get single shipment
 router.get('/:id',
   authMiddleware,
