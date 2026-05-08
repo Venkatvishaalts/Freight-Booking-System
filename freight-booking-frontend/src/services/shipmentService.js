@@ -8,4 +8,4 @@ export const deleteShipment = (id) => api.delete(`/shipments/${id}`);
 export const getShipperShipments = (shipperId) => api.get(`/shipments/shipper/${shipperId}`);
 
 // ✅ Add this
-export const cancelShipment = (id) => api.patch(`/shipments/${id}/cancel`);
+export const cancelShipment = (id) => api.put(`/shipments/${id}/cancel`);

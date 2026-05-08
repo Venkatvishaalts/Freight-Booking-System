@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
-import { createShipment, getShipperShipments, deleteShipment } from '../services/shipmentService';
+import { createShipment, getShipperShipments, cancelShipment } from '../services/shipmentService';
 import ShipmentCard from '../components/ShipmentCard';
 
 const emptyForm = {
@@ -75,7 +75,7 @@ export default function ShipperDashboard() {
   const handleDelete = async (shipmentId) => {
     if (!window.confirm('Cancel this shipment?')) return;
     try {
-      await deleteShipment(shipmentId);
+      await cancelShipment(shipmentId);
       toast.success('Shipment cancelled');
       fetchMyShipments();
     } catch {
